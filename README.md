@@ -2,15 +2,17 @@
 
 A Windows photo mode for VHOLUME with a 35 mm viewfinder, interchangeable lenses, film looks, and manual focus.
 
-[Download the mod ZIP](https://github.com/technicallyalex/vholume-photo-camera/releases/latest)
+[Download the Windows installer ZIP](https://github.com/technicallyalex/vholume-photo-camera/releases/latest/download/VHOLUME-Photo-Camera-Installer.zip) · [Manual install ZIP](https://github.com/technicallyalex/vholume-photo-camera/releases/latest/download/VHOLUME-Photo-Camera.zip)
 
 ![VHOLUME cityscape photographed with the 16 mm lens](examples/city-16mm.png)
 
 ## Install
 
-1. Close VHOLUME. Install UE4SS in `VHOLUME\Binaries\Win64` inside the game's Steam installation folder. [UE4SS installation guide](https://docs.ue4ss.com/dev/installation-guide.html)
-2. Extract the release ZIP and copy `VHOLUMEPhotoCamera` from `ue4ss\Mods` into the game's `VHOLUME\Binaries\Win64\ue4ss\Mods` folder.
+1. Close VHOLUME and extract the installer ZIP.
+2. Double-click **Install Photo Camera.cmd**. It finds the Steam installation and uses the bundled UE4SS build if needed. If prompted, paste the folder from Steam's **Browse local files** action.
 3. Start the game, enter a level, and press **5** to open Photo Studio. **Right-click** raises or lowers the finder. **Left-click** takes a photo with the finder raised.
+
+For a manual install, install UE4SS in `VHOLUME\Binaries\Win64` inside the game's Steam installation folder. Copy `VHOLUMEPhotoCamera` from the manual ZIP's `ue4ss\Mods` into the game's `VHOLUME\Binaries\Win64\ue4ss\Mods` folder. [UE4SS installation guide](https://docs.ue4ss.com/dev/installation-guide.html)
 
 Photos save to `%LOCALAPPDATA%\VHOLUME\Saved\Screenshots\Windows`. The ZIP includes the full controls and settings guide. Tested with VHOLUME Steam build **26455274** and UE4SS **3.0.1-1011-gb50986bd**.
 
