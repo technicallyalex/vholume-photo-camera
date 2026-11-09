@@ -16,6 +16,12 @@ For a manual install, install UE4SS in `VHOLUME\Binaries\Win64` inside the game'
 
 Photos save to `%LOCALAPPDATA%\VHOLUME\Saved\Screenshots\Windows`. The ZIP includes the full controls and settings guide. Tested with VHOLUME Steam build **26455274** and UE4SS **3.0.1-1011-gb50986bd**.
 
+## Viewfinder in action
+
+![Raised viewfinder with a 24 mm lens, square reticle, and f/2.0 readout](examples/viewfinder-square-24mm.png)
+
+![Raised viewfinder framing a sunlit courtyard with a 35 mm lens and circle reticle](examples/viewfinder-circle-35mm.png)
+
 ## Example photos
 
 <img src="examples/concrete-85mm.png" alt="Black-and-white concrete detail at 85 mm" width="46%"> <img src="examples/portrait-135mm.png" alt="Character portrait at 135 mm" width="46%">
