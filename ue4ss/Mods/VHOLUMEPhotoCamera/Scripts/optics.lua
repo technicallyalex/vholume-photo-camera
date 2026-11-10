@@ -1,6 +1,5 @@
 return function(ue, system, pose, refresh, binds)
-    local optics = { enabled = true, manual = false, aperture = 3, distance = 400 }
-    local apertures = {1.0, 1.4, 2, 2.8, 4, 5.6, 8, 11, 16}
+    local optics = { enabled = true, manual = false, distance = 400 }
     local maxDistance = 100000 -- One kilometer is treated as infinity.
     local minDistance = 35
     local noColor = { R = 0, G = 0, B = 0, A = 0 }
@@ -122,9 +121,9 @@ return function(ue, system, pose, refresh, binds)
         if optics.enabled then
             setQuality(active)
             pp.bOverride_DepthOfFieldFstop = true
-            pp.DepthOfFieldFstop = apertures[optics.aperture]
+            pp.DepthOfFieldFstop = active.exposure.aperture
             pp.bOverride_DepthOfFieldMinFstop = true
-            pp.DepthOfFieldMinFstop = apertures[1]
+            pp.DepthOfFieldMinFstop = 1
             pp.bOverride_DepthOfFieldBladeCount = true
             pp.DepthOfFieldBladeCount = 9
             pp.bOverride_DepthOfFieldSensorWidth = true
@@ -165,33 +164,10 @@ return function(ue, system, pose, refresh, binds)
         refresh(active)
     end
 
-    local wheelAxis = binds.raw("MouseWheelAxis")
-
-    local function wheelFocus(active, now)
-        local method = "/Script/Engine.PlayerController:WasInputKeyJustPressed"
-        local up = ue.call(method, active.pc, binds.key("focusFar"))
-        local down = ue.call(method, active.pc, binds.key("focusNear"))
-        local far, near = binds.name("focusFar"), binds.name("focusNear")
-        local delta = 0
-        if far:find("MouseScroll",1,true) or near:find("MouseScroll",1,true) then
-            delta = ue.call("/Script/Engine.PlayerController:GetInputAnalogKeyState", active.pc, wheelAxis)
-        end
-        local wheel = math.abs(delta) >= .01 and (delta > 0 and "MouseScrollUp" or "MouseScrollDown")
-        local previous = active.wheelAxis or 0
-        active.wheelAxis = delta
-        local ticks = 0
-        if up ~= down then
-            local direction = up and 1 or -1
-            ticks = (up and far or near) == wheel and math.abs(delta) or 1
-            ticks = ticks * direction
-        elseif wheel and math.abs(previous) < 0.01 then
-            ticks = (wheel == far and 1 or (wheel == near and -1 or 0)) * math.abs(delta)
-        end
-        if ticks ~= 0 then
-            local fine = binds.isFine(active.pc)
-            turnFocus(active, ticks, fine, now)
-            return fine and "fine" or "focus"
-        end
+    function optics.moveFocus(active, ticks, fine, now)
+        if not active.raised or not optics.manual or ticks == 0 then return end
+        turnFocus(active, ticks, fine, now)
+        return fine and "fine" or "focus"
     end
 
     function optics.tick(active, now)
@@ -210,7 +186,12 @@ return function(ue, system, pose, refresh, binds)
         end
         if optics.manual then
             animateFocus(active, now)
-            return wheelFocus(active, now)
+            local far = binds.pressed(active.pc,"focusFar")
+            local near = binds.pressed(active.pc,"focusNear")
+            if far ~= near then
+                local amount = math.max(1, math.abs(binds.wheel))
+                return optics.moveFocus(active, far and amount or -amount, binds.isFine(active.pc), now)
+            end
         end
     end
 
@@ -232,20 +213,9 @@ return function(ue, system, pose, refresh, binds)
         end
         optics.manual = not optics.manual
         optics.locked = false
-        active.wheelAxis = nil
         optics.enabled = true
         optics.apply(active)
         refresh(active)
-    end
-
-    function optics.stepAperture(active, direction)
-        if not active.raised then return end
-        local nextAperture = math.max(1, math.min(#apertures, optics.aperture + direction))
-        if nextAperture == optics.aperture then return false end
-        optics.aperture = nextAperture
-        optics.apply(active)
-        refresh(active)
-        return true
     end
 
     local function meters(distance)
@@ -256,9 +226,8 @@ return function(ue, system, pose, refresh, binds)
 
     function optics.readout(active)
         local mode = optics.locked and "AF-L " or (optics.manual and "MF " or "AF ")
-        local aperture = string.format("f/%.1f", apertures[optics.aperture])
         local subject = active.subjectDistance
-        return aperture, mode .. meters(optics.distance), subject and ("SUBJ " .. meters(subject)) or "NO TARGET"
+        return mode .. meters(optics.distance), subject and ("SUBJ " .. meters(subject)) or "NO TARGET"
     end
 
     return optics

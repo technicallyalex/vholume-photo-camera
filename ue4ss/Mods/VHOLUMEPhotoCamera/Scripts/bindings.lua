@@ -1,4 +1,4 @@
-return function(ue, log)
+return function(ue, log, exposure)
     local binds = {}
     binds.groups = {
         {"Camera",
@@ -45,7 +45,7 @@ return function(ue, log)
     local modifiers = {
         LeftShift=true,RightShift=true,LeftControl=true,RightControl=true,LeftAlt=true,RightAlt=true,
     }
-    local reserved = { F9=true,Enter=true }
+    local reserved = { F9=true,Enter=true,Tab=true }
     local choices, allowed, keys = {}, {}, {}
     local function add(name)
         choices[#choices+1] = name
@@ -98,20 +98,32 @@ return function(ue, log)
         return {binds.token("focusFar"),binds.token("focusNear")}
     end
     function binds.tabHint()
-        for _, id in ipairs({"equip","studio","finder","frame","lensPrev","lensNext",
-                "menuLeft","menuRight","menuNext","menuPrev","menuSelect","placeStart"}) do
-            if current[id] == "Tab" then return "Shift+Tab" end
-        end
         return "Tab"
     end
     function binds.shiftDown(pc)
         return ue.call(down,pc,binds.raw("LeftShift")) or ue.call(down,pc,binds.raw("RightShift"))
     end
 
+    function binds.wheelDial(pc)
+        local function held(name) return ue.call(down,pc,binds.raw(name)) end
+        local ctrl = held("LeftControl") or held("RightControl")
+        local alt = held("LeftAlt") or held("RightAlt")
+        if held("Tab") then
+            if ctrl then return "mode", "Tab + Ctrl" end
+            if alt then return "ratio", "Tab + Alt" end
+            if binds.shiftDown(pc) then return "film", "Tab + Shift" end
+            return "lens", "Tab"
+        end
+        if ctrl and alt then return "iso", "Ctrl + Alt" end
+        if ctrl then return "aperture", "Ctrl" end
+        if alt then return "shutter", "Alt" end
+    end
+
     local function permitted(id, name)
         if not allowed[name] or reserved[name] then return false end
         if name == "LeftMouseButton" and id ~= "shoot" then return false end
-        return (id == "fine") == (modifiers[name] == true)
+        if id == "fine" then return name == "LeftShift" or name == "RightShift" end
+        return not modifiers[name]
     end
 
     local function use(values)
@@ -128,12 +140,15 @@ return function(ue, log)
 
     function binds.load(saved)
         if path then return end
-        path = saved:gsub("[/\\]+$","").."/VHOLUMEPhotoCamera.keys"
+        local stable = saved:gsub("[/\\]+$","").."/VHOLUMEPhotoCamera.keys"
+        path = stable..".exposure-preview"
         local file = io.open(path,"rb") or io.open(path..".bak","rb")
+            or io.open(stable,"rb") or io.open(stable..".bak","rb")
         if not file then return end
         local body = file:read(8193)
         file:close()
         if not body or #body > 8192 then return end
+        exposure.loadOptions("\n"..body.."\n")
         local loaded, legacy = {}, false
         for id,name in body:gmatch("([%a]+)=([%w]+)") do
             if actions[id] and permitted(id,name) then loaded[id] = name end
@@ -174,6 +189,7 @@ return function(ue, log)
         local file = io.open(temp,"wb")
         if not file then return false end
         local lines = {"aimScaling="..(scaling and "1" or "0")}
+        for _,line in ipairs(exposure.optionLines()) do lines[#lines+1] = line end
         for _,id in ipairs(order) do lines[#lines+1] = id.."="..updated[id] end
         local written = file:write(table.concat(lines,"\n"),"\n")
         local closed = file:close()
@@ -201,9 +217,11 @@ return function(ue, log)
         return save(current,enabled)
     end
 
+    function binds.persist() return save(current,aimScaling) end
+
     function binds.assign(id,name)
         if not permitted(id,name) then
-            if id == "fine" then return false,"Choose Shift, Ctrl, or Alt for fine focus." end
+            if id == "fine" then return false,"Choose Left Shift or Right Shift for fine focus." end
             return false,(labels[name] or name).." is reserved."
         end
         for _,other in ipairs(order) do
@@ -229,15 +247,26 @@ return function(ue, log)
         if math.abs(delta) >= .01 then return delta > 0 and "MouseScrollUp" or "MouseScrollDown" end
     end
 
-    function binds.beginFrame(pc)
-        if not wheelShortcut then return end
+    function binds.beginFrame(pc, finderRaised)
+        binds.wheel = 0
+        wheelEdge = nil
+        binds.dial, binds.chord = nil, nil
+        if not finderRaised and not wheelShortcut then previousWheel = 0; return end
+        if finderRaised then binds.dial, binds.chord = binds.wheelDial(pc) end
         local delta = ue.call(analog,pc,binds.raw("MouseWheelAxis"))
-        wheelEdge = math.abs(previousWheel) < .01 and math.abs(delta) >= .01
-            and (delta > 0 and "MouseScrollUp" or "MouseScrollDown") or nil
+        local up = ue.call(pressed,pc,binds.raw("MouseScrollUp"))
+        local downWheel = ue.call(pressed,pc,binds.raw("MouseScrollDown"))
+        if up ~= downWheel then
+            binds.wheel = (up and 1 or -1) * math.max(1, math.abs(delta))
+        elseif math.abs(previousWheel or 0) < .01 and math.abs(delta) >= .01 then
+            binds.wheel = delta
+        end
         previousWheel = delta
+        if binds.wheel ~= 0 then wheelEdge = binds.wheel > 0 and "MouseScrollUp" or "MouseScrollDown" end
     end
 
     function binds.pressed(pc,id)
+        if binds.dial and current[id]:find("MouseScroll",1,true) then return false end
         return ue.call(pressed,pc,binds.key(id)) or wheelEdge == current[id]
     end
 

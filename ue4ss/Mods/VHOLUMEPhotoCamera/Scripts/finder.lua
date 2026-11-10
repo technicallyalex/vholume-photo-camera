@@ -2,7 +2,7 @@ local directory = assert(debug.getinfo(1, "S").source:match("^@(.+[\\/])"))
 local buildControls = dofile(directory .. "controls.lua")
 local buildAnimation = dofile(directory .. "animation.lua")
 
-return function(ue, pc, rect, raised, assetPath, binds, reticle)
+return function(ue, pc, rect, raised, assetPath, binds, reticle, controller)
     local ui = { raised = raised }
     local dpi, w, h = rect.dpi, rect.width, rect.height
     local unit = math.min(w / (h > w and 540 or 960), h / 540)
@@ -68,10 +68,11 @@ return function(ue, pc, rect, raised, assetPath, binds, reticle)
     local toastY
     local formatIcon = rect.portrait and "Controls/portrait" or "Controls/landscape"
     local key = binds.token
-    local lens = { "lens", 77, "LENS", key("lensPrev"), key("lensNext") }
-    local frame = { "frame", 78, "ROTATE", key("frame") }
-    local walk = { "walk", 88, "SLOW WALK", key("walk") }
-    local studio = { "studio", 94, "STUDIO", key("studio") }
+    local lens = controller and { "lens", 77, "LENS", "←", "→" }
+        or { "lens", 77, "LENS", key("lensPrev"), key("lensNext") }
+    local frame = { "frame", 78, "ROTATE", controller and "RB + Y" or key("frame") }
+    local walk = { "walk", 88, "SLOW WALK", controller and "L3" or key("walk") }
+    local studio = { "studio", 94, "STUDIO", controller and "Y" or key("studio") }
     local placeSubject = { "placeStart", 103, "PLACE SUBJECT", key("placeStart") }
 
     if raised then
@@ -86,30 +87,72 @@ return function(ue, pc, rect, raised, assetPath, binds, reticle)
         block(x - lip, y, lip, fh, edge)
         block(x + fw, y, lip, fh, edge)
 
-        local tabY = y - 27 * unit
-        local topWidth = math.max(fw, 352 * unit)
-        local topLeft, topRight = (w - topWidth) / 2, (w + topWidth) / 2
-        local lcd = rgb(0.35, 0.39, 0.30)
-        local digit = rgb(0.014, 0.023, 0.015)
-        block(topLeft + 8 * unit, tabY, 52 * unit, 18 * unit, lcd)
-        text(topLeft + 13 * unit, tabY + unit, 47 * unit, 16 * unit, 11, digit, "M 125")
-        block(topLeft + 64 * unit, tabY, 74 * unit, 18 * unit, edge)
-        ui.lens = text(topLeft + 64 * unit, tabY + unit, 74 * unit, 16 * unit, 11, ink)
-        ue.call("/Script/UMG.TextLayoutWidget:SetJustification", ui.lens, 1)
-        block(w / 2 - 23 * unit, tabY, 46 * unit, 18 * unit, edge)
-        ui.aperture = text(w / 2 - 23 * unit, tabY + unit, 46 * unit, 16 * unit, 12, ink)
-        ue.call("/Script/UMG.TextLayoutWidget:SetJustification", ui.aperture, 1)
-        picture(formatIcon, topRight - 129 * unit, tabY + 2 * unit, 21 * unit, 15 * unit, 1)
-        ui.focus = text(topRight - 104 * unit, tabY - 1 * unit, 104 * unit, 14 * unit, 11, ink)
-        ui.subject = text(topRight - 104 * unit, tabY + 12 * unit, 104 * unit, 13 * unit, 9, ink)
+        local tabY = y - 40 * unit
+        local topWidth = math.min(w-20*unit,math.max(fw,400*unit))
+        local topLeft = (w - topWidth) / 2
+        local gap = 4 * unit
+        local cell = (topWidth - 4*gap) / 5
+        local gold = rgb(.94,.69,.38)
+        local good = rgb(.62,.83,.52)
+        local lit = rgb(.18,.17,.10)
+        local fields, backgrounds, autoTags = {}, {}, {}
+        for i, item in ipairs({{"mode","EXPOSURE"},{"aperture","APERTURE"},
+                {"shutter","SHUTTER"},{"iso","SENSITIVITY"},{"meter","METER"}}) do
+            local bx = topLeft+(i-1)*(cell+gap)
+            backgrounds[item[1]] = block(bx,tabY,cell,33*unit,edge)
+            block(bx,tabY,cell,unit,dim)
+            text(bx+5*unit,tabY+3*unit,cell-10*unit,10*unit,7,gold,item[2])
+            fields[item[1]] = text(bx+5*unit,tabY+13*unit,cell-10*unit,18*unit,11,ink)
+            if i >= 2 and i <= 4 then
+                autoTags[item[1]] = text(bx+cell-22*unit,tabY+4*unit,20*unit,9*unit,6,good,"AUTO")
+            end
+        end
+        local last = {}
+        local meterX = topLeft+4*(cell+gap)
+        local meterScale = add("CanvasPanel",meterX+6*unit,tabY+26*unit,cell-12*unit,6*unit)
+        local scaleW = cell-12*unit
+        block(0,2*unit,scaleW,unit,dim,meterScale)
+        for i=0,4 do block(scaleW*i/4,0,unit,5*unit,dim,meterScale) end
+        local needle = block(scaleW/2,0,2*unit,5*unit,good,meterScale)
+        fields.meterWarning = text(meterX+5*unit,tabY+25*unit,cell-9*unit,8*unit,6.5,gold)
+        local function value(id, value)
+            if last[id] == value then return end
+            last[id] = value
+            fields[id]:SetText(FText(value))
+        end
+        function ui.setExposure(mode, values, speed)
+            value("mode",mode)
+            value("aperture",string.format("f/%.1f",values.aperture))
+            value("shutter",speed)
+            value("iso","ISO "..values.iso)
+            for id, tag in pairs(autoTags) do
+                local auto = values[id.."Auto"]
+                if last[id.."Auto"] ~= auto then
+                    ue.call("/Script/UMG.Widget:SetVisibility",tag,auto and 3 or 2)
+                    last[id.."Auto"] = auto
+                end
+            end
+            value("meter",mode=="GAME" and "GAME" or (values.errorEV and
+                string.format("%+.1f EV",values.errorEV) or "NO METER"))
+            value("meterWarning",values.limited or "")
+            local hasMeter = values.errorEV and not values.limited
+            ue.call("/Script/UMG.Widget:SetVisibility",meterScale,hasMeter and 3 or 2)
+            if hasMeter then
+                local offset = math.max(-2,math.min(2,values.errorEV)) * scaleW/4
+                ue.call("/Script/UMG.Widget:SetRenderTranslation",needle,{X=offset/dpi,Y=0})
+            end
+        end
 
         local readoutX, readoutY = x + 9*unit, y + 9*unit
-        block(readoutX,readoutY,59*unit,20*unit,rgb(.009,.018,.012,.89))
+        local focusW = math.min(173*unit,fw-18*unit)
+        block(readoutX,readoutY,focusW,30*unit,rgb(.009,.018,.012,.89))
         local indicators = {}
         for i, key in ipairs({"near","aligned","far"}) do
             indicators[i] = picture("Studio/focus-"..key, readoutX+(5+(i-1)*17)*unit,
                 readoutY+3*unit,14*unit,14*unit,.20)
         end
+        ui.focus = text(readoutX+59*unit,readoutY+2*unit,focusW-62*unit,15*unit,9,ink)
+        ui.subject = text(readoutX+59*unit,readoutY+15*unit,focusW-62*unit,13*unit,8,dim)
         local lastIndicator
         function ui.setFocusIndicator(direction)
             if lastIndicator == direction then return end
@@ -135,6 +178,27 @@ return function(ue, pc, rect, raised, assetPath, binds, reticle)
         ue.call("/Script/UMG.Widget:SetVisibility", ui.curtain, 2)
         toastY = y + fh - 30 * unit
 
+        local infoW = math.min(176*unit,fw*.70)
+        local info = add("CanvasPanel",x+9*unit,y+fh-28*unit,infoW,19*unit)
+        block(0,0,infoW,19*unit,rgb(.009,.018,.012,.89),info)
+        picture(formatIcon,4*unit,3*unit,17*unit,13*unit,1,info)
+        ui.lens = text(25*unit,2.5*unit,infoW-29*unit,16*unit,9,ink,"",info)
+        local dialW = math.min(211*unit,fw*.85)
+        local dialPanel = add("CanvasPanel",x+fw-dialW-9*unit,y+fh-52*unit,dialW,22*unit)
+        block(0,0,dialW,22*unit,rgb(.023,.032,.024,.96),dialPanel)
+        block(0,0,2*unit,22*unit,gold,dialPanel)
+        local dialText = text(7*unit,4*unit,dialW-12*unit,16*unit,9,gold,"",dialPanel)
+        local previousDial, previousHint
+        ue.call("/Script/UMG.Widget:SetVisibility",dialPanel,2)
+        function ui.setDial(id, hint)
+            if id == previousDial and hint == previousHint then return end
+            if backgrounds[previousDial] then backgrounds[previousDial]:SetBrushColor(edge) end
+            if backgrounds[id] then backgrounds[id]:SetBrushColor(lit) end
+            ue.call("/Script/UMG.Widget:SetVisibility",dialPanel,hint and 3 or 2)
+            if hint then dialText:SetText(FText(hint)) end
+            previousDial, previousHint = id, hint
+        end
+
         local tall = h > w
         local dockWidth, dockY = math.min(w - 24 * unit, 808 * unit), y + fh + 4 * unit
         local dockX = (w - dockWidth) / 2
@@ -142,22 +206,29 @@ return function(ue, pc, rect, raised, assetPath, binds, reticle)
         block(dockX, dockY, dockWidth, unit, rgb(.24,.31,.25))
         block(dockX, dockY + unit, 2 * unit, (tall and 68 or 45) * unit, rgb(.62,.44,.22))
         local dockInset, rowWidth = dockX + 7 * unit, dockWidth - 14 * unit
-        local shoot = { "shoot", 104, "TAKE PHOTO", key("shoot") }
-        local finder = { "finder", 110, "LOWER FINDER", key("finder") }
-        local autofocus = { "af", 132, "SINGLE-SHOT AF", key("af") }
-        local mode = { "mode", 72, "AF/MF", key("mode") }
+        local shoot = { "shoot", 104, "TAKE PHOTO", controller and "RT" or key("shoot") }
+        local finder = { "finder", 110, "LOWER FINDER", controller and "LT" or key("finder") }
+        local autofocus = { "af", 132, "SINGLE-SHOT AF", controller and "A" or key("af") }
+        local mode = { "mode", 72, "AF/MF", controller and "X" or key("mode") }
         local focusKeys = binds.focusTokens()
         local focus = { "focus", 74, "FOCUS", table.unpack(focusKeys) }
         local fine = { "fine", 91, "FINE", key("fine"), table.unpack(focusKeys) }
-        local dof = { "dof", 62, "DOF", key("dof") }
-        local aperture = { "aperture", 93, "APERTURE", key("apertureDown"), key("apertureUp") }
-        if tall then
+        local dof = { "dof", 62, "DOF", controller and "B" or key("dof") }
+        local aperture = { "aperture", 93, "APERTURE", "Ctrl", "mouse-wheel" }
+        local shutter = { "speed", 93, "SHUTTER", "Alt", "mouse-wheel" }
+        local iso = { "iso", 93, "ISO", "Ctrl + Alt", "mouse-wheel" }
+        if controller then
+            ui.addControlRow(dockInset,dockY+4*unit,rowWidth,{shoot,finder,autofocus,lens,studio},nil,true)
+            ui.addControlRow(dockInset,dockY+25*unit,rowWidth,{mode,dof,walk,
+                {"exposure",90,"EXPOSURE","LB"}, {"focus",97,"FOCUS / ISO","RB"},
+                {"ratio",87,"MODE / FRAME","↑","↓"}},nil,true)
+        elseif tall then
             ui.addControlRow(dockInset, dockY + 4 * unit, rowWidth, { shoot, finder, autofocus }, nil, true)
-            ui.addControlRow(dockInset, dockY + 25 * unit, rowWidth, { mode, focus, fine, dof, aperture }, nil, true)
-            ui.addControlRow(dockInset, dockY + 46 * unit, rowWidth, { lens, frame, walk, studio, placeSubject }, nil, true)
+            ui.addControlRow(dockInset, dockY + 25 * unit, rowWidth, { mode, focus, fine, dof, studio }, nil, true)
+            ui.addControlRow(dockInset, dockY + 46 * unit, rowWidth, { aperture, shutter, iso, lens }, nil, true)
         else
             ui.addControlRow(dockInset, dockY + 4 * unit, rowWidth, { shoot, finder, autofocus, lens, frame, studio }, nil, true)
-            ui.addControlRow(dockInset, dockY + 25 * unit, rowWidth, { mode, focus, fine, dof, aperture, walk, placeSubject }, nil, true)
+            ui.addControlRow(dockInset, dockY + 25 * unit, rowWidth, { mode, focus, fine, dof, aperture, shutter, iso }, nil, true)
         end
     else
         local width = math.min(616 * unit, w - 30 * unit)
@@ -186,7 +257,7 @@ return function(ue, pc, rect, raised, assetPath, binds, reticle)
         ui.summary = text(x + 115 * unit, y + 28 * unit, width - 126 * unit, 16 * unit, 9.5, dim)
         local controlsX = x + 92 * unit
         local controlsWidth = width - 104 * unit
-        local finder = { "finder", 110, "RAISE FINDER", key("finder") }
+        local finder = { "finder", 110, "RAISE FINDER", controller and "LT" or key("finder") }
         local shooting = add("CanvasPanel",controlsX,y+47*unit,controlsWidth,19*unit)
         ui.addControlRow(0, 0, controlsWidth, { finder, lens, frame }, shooting, true)
         ui.addControlRow(controlsX, y + 69 * unit, controlsWidth, { walk, studio, placeSubject }, nil, true)
@@ -197,11 +268,11 @@ return function(ue, pc, rect, raised, assetPath, binds, reticle)
         block(0, unit, 3*unit, 44*unit, rgb(0.64, 0.39, 0.20), placement)
         local poseLabel = text(12*unit, 4*unit, width-24*unit, 16*unit, 11, ink, "", placement)
         ui.addControlRow(12*unit, 22*unit, width - 24*unit, {
-            { "place", 68, "PLACE", key("shoot") },
-            { "finish", 73, "FINISH", key("finder") },
-            { "turn", 85, "TURN", key("placeLeft"), key("placeRight") },
-            { "pose", 64, "POSE", key("placePose") },
-            { "undo", 71, "UNDO", key("placeUndo") },
+            { "place", 68, "PLACE", controller and "RT" or key("shoot") },
+            { "finish", 73, "FINISH", controller and "LT" or key("finder") },
+            controller and { "turn",85,"TURN","←","→" } or { "turn",85,"TURN",key("placeLeft"),key("placeRight") },
+            { "pose", 64, "POSE", controller and "↑" or key("placePose") },
+            { "undo", 71, "UNDO", controller and "X" or key("placeUndo") },
         }, placement, true)
         local placing, lastPose
         function ui.setPlacement(pose)

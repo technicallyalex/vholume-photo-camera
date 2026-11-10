@@ -1,13 +1,13 @@
 local directory = assert(debug.getinfo(1, "S").source:match("^@(.+[\\/])"))
 local buildControls = dofile(directory .. "controls.lua")
 
-return function(ue, pc, rect, assets, binds, cards, keyPage, raised)
+return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePage, exposure)
     local ui = {}
     local w, h, dpi = rect.width, rect.height, rect.dpi
     local wide = w >= h
     local columns = wide and #cards or 3
     local rows = math.ceil(#cards / columns)
-    local unit = math.min(w / (wide and 1040 or 620), h / (wide and 430 or 665))
+    local unit = math.min(w / (wide and 1180 or 620), h / (wide and 460 or 665))
     local tileW, tileH, gap = 178*unit, 220*unit, 9*unit
     local panelW = columns*tileW + (columns-1)*gap + 26*unit
     local panelH = rows*tileH + (rows-1)*gap + 136*unit
@@ -95,8 +95,8 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised)
         local image = icon and glyph(icon,px+5*unit,py+(sy-12*unit)/2,12*unit)
         local text = label(px+iconWidth,py+(size and 1 or 4)*unit,sx-iconWidth-2*unit,sy,
             size or (icon and 9.2 or 10),title,ink,true)
-        hitBox(px,py,sx,sy,action,card,step,background)
-        return text,image
+        local target = hitBox(px,py,sx,sy,action,card,step,background)
+        return text,image,target
     end
     local function stepper(px,py,sx,titleSize,action,card)
         local arrowW, height = 22*unit, 22*unit
@@ -143,7 +143,7 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised)
                 end
             end
         end
-        if clicked or (lastX and (lastX ~= px or lastY ~= py)) then focus(nil) end
+        if clicked or (lastX and px and (lastX ~= px or lastY ~= py)) then focus(nil) end
         lastX, lastY = px, py
         if target ~= hovered then
             local previous = hovered
@@ -212,12 +212,88 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised)
             reset:SetText(FText(resetting and "CONFIRM RESET" or "RESET DEFAULTS"))
             local prompt = "Select a binding to change it. Changes save automatically."
             if capturing == "fine" then
-                prompt = "Press Shift, Ctrl, or Alt."
+                prompt = "Press Left Shift or Right Shift."
             elseif capturing then
                 prompt = "Press the new key, mouse button, or wheel direction."
             end
             status:SetText(FText(message or prompt))
         end
+        return attach()
+    end
+
+    if exposurePage then
+        local pw, ph = (wide and 960 or 580)*unit, (wide and 340 or 490)*unit
+        local left, top = (w-pw)/2, (h-ph)/2
+        local innerX, innerW = left+13*unit, pw-26*unit
+        block(left,top,pw,ph,color(.025,.038,.032,.98))
+        block(left,top,pw,2*unit,gold)
+        glyph("reticle",innerX,top+13*unit,21*unit)
+        label(innerX+29*unit,top+9*unit,innerW,26*unit,19,"PHOTO STUDIO / EXPOSURE",ink)
+        local modesY, isoY = top+49*unit, top+(wide and 49 or 220)*unit
+        local column = wide and (innerW-16*unit)/2 or innerW
+        local isoX = wide and innerX+column+16*unit or innerX
+        label(innerX,modesY,column,18*unit,10,"EXPOSURE MODE",gold)
+        label(isoX,isoY,column,18*unit,10,"SENSITIVITY",gold)
+        local rows, markers, values = {}, {}, {}
+        local descriptions = {"Keeps game exposure", "Set aperture and shutter",
+            "Camera sets shutter", "Camera sets aperture"}
+        for i, mode in ipairs(exposure.modes) do
+            local py = modesY+(21+(i-1)*34)*unit
+            local _,_,target = button(innerX,py,column,29*unit,"","exposureMode",nil,i)
+            label(innerX+12*unit,py+6*unit,41*unit,18*unit,11,mode[1],gold)
+            label(innerX+57*unit,py+3*unit,column-62*unit,14*unit,10,mode[2],ink)
+            label(innerX+57*unit,py+15*unit,column-62*unit,12*unit,8,descriptions[i],quiet)
+            markers[i] = block(innerX+column-6*unit,py+5*unit,2*unit,19*unit,gold)
+            rows[#rows+1] = target
+        end
+        local names = {{"auto","Auto ISO"}, {"minISO","Minimum ISO"},
+            {"maxISO","Maximum ISO"}, {"minShutter","Preferred minimum shutter in A"}}
+        for i, row in ipairs(names) do
+            local id, title = row[1], row[2]
+            local py = isoY+(21+(i-1)*34)*unit
+            block(isoX,py,column,29*unit,buttonColor)
+            label(isoX+9*unit,py+7*unit,column-134*unit,17*unit,10,title,ink)
+            if i == 1 then
+                local caption,_,target = button(isoX+column-120*unit,py,120*unit,29*unit,"",id)
+                values[id], rows[#rows+1] = caption, target
+            else
+                local sx = isoX+column-120*unit
+                local _,_,target = button(sx,py,23*unit,29*unit,"‹",id,nil,-1,15)
+                button(isoX+column-23*unit,py,23*unit,29*unit,"›",id,nil,1,15)
+                values[id] = label(sx+23*unit,py+7*unit,74*unit,17*unit,10,"",ink,true)
+                rows[#rows+1] = target
+            end
+        end
+        local infoY = isoY+161*unit
+        local info = label(isoX,infoY,column,18*unit,9,"",quiet)
+        label(isoX,infoY+17*unit,column,16*unit,9,"ISO controls grain in every film look.",quiet)
+        local footerY = top+ph-68*unit
+        button(innerX,footerY,132*unit,24*unit,"BACK TO STUDIO","exposureBack",nil,nil,nil,"back")
+        button(innerX+innerW-134*unit,footerY,134*unit,24*unit,
+            raised and "LOWER VIEWFINDER" or "RAISE VIEWFINDER","finder",nil,nil,nil,"finder")
+        local notice = label(innerX,footerY+25*unit,innerW,16*unit,9,"",gold)
+        local hint = label(innerX,footerY+43*unit,innerW,16*unit,9,"",quiet)
+        function ui.notice(value) notice:SetText(FText(value)) end
+        function ui.update(_,_,_,_,_,config,controller)
+            for i, mark in ipairs(markers) do ue.call(widgetPath.."SetVisibility",mark,i==config.mode and 3 or 2) end
+            values.auto:SetText(FText(config.auto and "ON" or "OFF"))
+            values.minISO:SetText(FText(tostring(config.isos[config.minISO])))
+            values.maxISO:SetText(FText(tostring(config.isos[config.maxISO])))
+            values.minShutter:SetText(FText(config.speedText(config.speeds[config.minShutter])))
+            info:SetText(FText(config.mode==1 and "Game mode uses the selected ISO for grain."
+                or "Aperture Priority can slow the shutter at the ISO ceiling."))
+            hint:SetText(FText(controller and "D-PAD   Navigate / adjust       A   Select       B   Back"
+                or "ARROWS   Navigate / adjust       ENTER   Select       TAB   Next control"))
+        end
+        function ui.moveExposureFocus(direction)
+            local index
+            for i,target in ipairs(rows) do
+                if focused and target.action==focused.action
+                        and (target.action~="exposureMode" or target.step==focused.step) then index=i; break end
+            end
+            focus(rows[index and ((index-1+direction)%#rows+1) or (direction>0 and 1 or #rows)])
+        end
+        function ui.tick() end
         return attach()
     end
 
@@ -230,15 +306,21 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised)
 
     local footerY = y+panelH-67*unit
     local notice = label(innerX,footerY-16*unit,innerW,16*unit,10,"",gold)
-    ui.addControlRow(innerX,footerY+29*unit,innerW,{
+    local keyboardHints = add("CanvasPanel",innerX,footerY+29*unit,innerW,36*unit)
+    local controllerHints = add("CanvasPanel",innerX,footerY+29*unit,innerW,36*unit)
+    ui.addControlRow(0,0,innerW,{
         {"cards",0,"Card",binds.token("menuLeft"),binds.token("menuRight")},
         {"values",0,"Change",binds.token("menuNext"),binds.token("menuPrev")},
         {"use",0,"Card action",binds.token("menuSelect")},
-    },nil,true,.86)
-    ui.addControlRow(innerX,footerY+47*unit,innerW,{
+    },keyboardHints,true,.86)
+    ui.addControlRow(0,18*unit,innerW,{
         {"tab",0,"Focus",binds.tabHint()}, {"enter",0,"Activate","Enter"},
         {"studio",0,"Back",binds.token("studio")},
-    },nil,true,.86)
+    },keyboardHints,true,.86)
+    ui.addControlRow(0,0,innerW,{
+        {"padCards",0,"Card","←","→"}, {"padValues",0,"Change","↑","↓"},
+        {"padSelect",0,"Select","A"}, {"padBack",0,"Back","B"}, {"padFinder",0,"Finder","LT"},
+    },controllerHints,true,.86)
 
     local tiles = {}
     local cellW, cellH = 100*unit, (96/112)*100*unit
@@ -252,17 +334,27 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised)
         tile.back = block(px,py,tileW,tileH,color(.049,.067,.056))
         tile.rule = block(px,py,2*unit,tileH,color(.21,.27,.21))
         block(px+2*unit,py+1*unit,tileW-3*unit,20*unit,color(.030,.047,.039))
-        glyph(card == "subjects" and "subject" or card,px+9*unit,py+5*unit,12*unit)
+        local icon = card == "subjects" and "subject" or card == "exposure" and "reticle" or card
+        glyph(icon,px+9*unit,py+5*unit,12*unit)
         label(px+27*unit,py+5*unit,tileW-34*unit,17*unit,9,("%02d  %s"):format(i,card:upper()),quiet)
-        local clip = add("CanvasPanel",px+(tileW-cellW)/2,py+19*unit,cellW,cellH)
-        ue.call(widgetPath.."SetClipping",clip,1)
-        tile.image = add("Image",0,0,8*cellW,6*cellH,clip)
+        if card == "exposure" then
+            block(px+60*unit,py+44*unit,58*unit,42*unit,color(.13,.17,.13))
+            tile.mode = label(px+60*unit,py+51*unit,58*unit,29*unit,20,"",gold,true)
+        else
+            local clip = add("CanvasPanel",px+(tileW-cellW)/2,py+19*unit,cellW,cellH)
+            ue.call(widgetPath.."SetClipping",clip,1)
+            tile.image = add("Image",0,0,8*cellW,6*cellH,clip)
+        end
         hitBox(px,py,tileW,tileH,"card",i)
         local innerX, innerW = px+9*unit,tileW-18*unit
         if card == "photos" then
             tile.value = label(innerX,py+110*unit,innerW,20*unit,14,"",ink,true)
             tile.detail = label(innerX,py+134*unit,innerW,17*unit,10,"",quiet,true)
             button(innerX,py+156*unit,innerW,21*unit,"OPEN FOLDER","select",i,nil,nil,"photos")
+        elseif card == "exposure" then
+            tile.value = label(innerX,py+110*unit,innerW,20*unit,13,"",ink,true)
+            tile.detail = label(innerX,py+134*unit,innerW,17*unit,10,"",quiet,true)
+            button(innerX,py+156*unit,innerW,21*unit,"EDIT EXPOSURE","exposureOpen",i)
         else
             tile.value = stepper(innerX,py+108*unit,innerW,card == "film" and 8.6 or 11,"step",i)
             tile.detail = label(innerX,py+135*unit,innerW,18*unit,card == "film" and 9 or 10,"",quiet,true)
@@ -272,12 +364,7 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised)
                 },nil,false,.85)
                 tile.scaling = button(innerX,py+189*unit,innerW,22*unit,"","aimScaling",i)
             elseif card == "film" then
-                label(innerX+8*unit,py+160*unit,55*unit,13*unit,8,"GRAIN",quiet)
-                tile.grain = {}
-                for level=1,5 do
-                    tile.grain[level] = block(innerX+(60+16*(level-1))*unit,py+161*unit,
-                        12*unit,7*unit,buttonColor)
-                end
+                label(innerX,py+159*unit,innerW,15*unit,9,"Grain follows ISO",quiet,true)
             elseif card == "frame" then
                 tile.rotate = button(innerX,py+156*unit,innerW,21*unit,"ROTATE FRAME","portrait",i,nil,nil,"rotate")
                 glyph("reticle",innerX+3*unit,py+181*unit,11*unit)
@@ -304,20 +391,24 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised)
             {X=-(cell%8)*cellW/dpi,Y=-math.floor(cell/8)*cellH/dpi})
     end
     local previous
-    function ui.update(selected,content,portrait,square,reticle)
+    function ui.update(selected,content,portrait,square,reticle,config,controller)
+        ue.call(widgetPath.."SetVisibility",keyboardHints,controller and 2 or 3)
+        ue.call(widgetPath.."SetVisibility",controllerHints,controller and 3 or 2)
         for i, card in ipairs(cards) do
             local tile, data = tiles[card], content[card]
             tile.back:SetBrushColor(i == selected and color(.12,.145,.103) or color(.049,.067,.056))
             tile.rule:SetBrushColor(i == selected and gold or color(.21,.27,.21))
-            tile.value:SetText(FText(data[1]))
-            tile.detail:SetText(FText(data[2]))
-            if tile.grain then
-                local strength = math.ceil(data[4]*7)
-                for level,bar in ipairs(tile.grain) do
-                    bar:SetBrushColor(level <= strength and gold or buttonColor)
-                end
+            if card == "exposure" then
+                local mode = config.modes[config.mode]
+                tile.mode:SetText(FText(mode[1]))
+                tile.value:SetText(FText(mode[2]))
+                tile.detail:SetText(FText(config.auto and config.mode~=1 and "Auto ISO on"
+                    or "ISO "..config.isos[config.iso]))
+            else
+                tile.value:SetText(FText(data[1]))
+                tile.detail:SetText(FText(data[2]))
             end
-            if tile.art ~= data[3] then
+            if tile.image and tile.art ~= data[3] then
                 tile.image:SetBrushFromTexture(texture("Studio/"..data[3]),false)
                 tile.art = data[3]
                 tile.start = previous
@@ -335,8 +426,10 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised)
         if previous == frame then return end
         previous = frame
         for _,tile in pairs(tiles) do
-            tile.start = tile.start or frame
-            drawFrame(tile,(frame-tile.start)%48)
+            if tile.image then
+                tile.start = tile.start or frame
+                drawFrame(tile,(frame-tile.start)%48)
+            end
         end
     end
     function ui.notice(value) notice:SetText(FText(value)) end

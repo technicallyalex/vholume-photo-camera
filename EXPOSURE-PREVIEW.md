@@ -1,0 +1,66 @@
+# VHOLUME Photo Camera Exposure Preview
+
+**Version 1.1.0-alpha.1** · Windows · Separate preview build
+
+## Install and switch back
+
+Close VHOLUME. Extract the preview installer ZIP and run **Install Exposure Preview.cmd**. It detects the Steam installation and moves any existing Photo Camera folder into a dated backup next to the UE4SS Mods folder.
+
+For a manual install, back up the existing mod outside **Mods**. Copy **VHOLUMEPhotoCamera** from the manual ZIP’s **ue4ss\Mods** into the game’s **VHOLUME\Binaries\Win64\ue4ss\Mods**. This build uses the same mod slot as the stable release.
+
+To switch back, close the game and reinstall the stable ZIP or move the dated backup back into **Mods** under its original name. Preview keybinds, aim scaling, and Auto ISO options save separately in **VHOLUMEPhotoCamera.keys.exposure-preview**. The preview imports compatible bindings from the stable version the first time it loads.
+
+## Exposure
+
+Press **5** or **controller View** to equip the camera and open Photo Studio. Select **Exposure → Edit Exposure**.
+
+| Mode | You set | The camera sets |
+| --- | --- | --- |
+| **Game** | Aperture for depth of field and ISO for grain. Shutter speed is display-only. | VHOLUME sets exposure as usual. |
+| **M** | Aperture, shutter speed, and ISO | ISO if Auto ISO is enabled |
+| **A** | Aperture and ISO if Auto ISO is off | Shutter speed and optional Auto ISO |
+| **S** | Shutter speed and ISO if Auto ISO is off | Aperture and optional Auto ISO |
+
+Game mode is the default. In M, A, and S, a wider aperture, slower shutter, or higher ISO brightens the image. Available settings cover f/1.0 to f/16, 1 second to 1/4000 second, and ISO 100 to 6400 in roughly one-third-stop steps. Shutter speed scales Unreal’s motion-vector blur. The preview captures a single rendered frame, so long exposures do not accumulate motion trails across frames. [Unreal Engine exposure documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/auto-exposure-in-unreal-engine) · [Unreal Engine motion blur settings](https://dev.epicgames.com/documentation/en-us/unreal-engine/post-process-effects-in-unreal-engine)
+
+Enable **Auto ISO** to set minimum and maximum sensitivity. Aperture Priority prefers the configured minimum shutter speed and can slow down after reaching the ISO ceiling. The viewfinder marks camera-set values **AUTO** and shows exposure error in EV. Film looks set color and tone. The actual ISO determines grain strength and size, including with the Neutral look.
+
+## Keyboard and mouse
+
+Right-click raises or lowers the finder. Left-click takes a photo. Middle-click runs single-shot autofocus. **F** switches AF/MF. **4** opens Studio or goes back one level. The regular camera shortcuts remain available.
+
+| Hold while scrolling | Adjust |
+| --- | --- |
+| Nothing | Manual focus |
+| **Shift** | Fine manual focus |
+| **Ctrl** | Aperture |
+| **Alt** | Shutter speed |
+| **Ctrl + Alt** | Manual ISO |
+| **Tab** | Lens |
+| **Tab + Ctrl** | Exposure mode |
+| **Tab + Alt** | Frame ratio |
+| **Tab + Shift** | Film look |
+
+The wheel chords apply with the finder raised. In Studio, **Tab** still navigates controls. **Tab**, **Ctrl**, and **Alt** have fixed roles in the preview’s wheel controls. Use either **Shift** key for the fine-focus binding.
+
+## Controller
+
+The layout uses Xbox-style labels. The left stick moves and the right stick aims.
+
+| Input | Action |
+| --- | --- |
+| **View / LT / RT** | Equip or stow / raise or lower finder / take photo |
+| **A / X / B / Y** | Single-shot AF / AF or MF / depth of field / Photo Studio |
+| **L3** | Toggle slow walk in solo play |
+| **D-pad ← → / ↑ / ↓** | Previous or next lens / exposure mode / frame ratio |
+| **LB + D-pad ← → / ↑ ↓** | Slower or faster shutter / close or open aperture |
+| **RB + D-pad ← → / ↑ ↓** | Focus nearer or farther / raise or lower manual ISO |
+| **RB + A / B / X / Y** | Hold for fine focus / toggle Auto ISO / next film look / rotate frame |
+| **Studio D-pad / A / B** | Navigate or adjust / select / back |
+| **Subject placement RT / LT / D-pad ← → / ↑ / X** | Place / finish / rotate / change pose / undo |
+
+The game’s normal pause control still opens its menu. Photos save in **%LOCALAPPDATA%\VHOLUME\Saved\Screenshots\Windows**.
+
+## Preview validation
+
+Lua 5.4 checks covered exposure math, ISO limits, grain, input routing, and finder and Studio construction across four simulated viewport sizes. The isolated game copy exited before loading the mod. In-game rendering, GPU meter readback, and physical controller input still need a play test.

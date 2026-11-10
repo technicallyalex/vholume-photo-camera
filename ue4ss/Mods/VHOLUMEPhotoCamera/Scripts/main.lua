@@ -9,14 +9,16 @@ local lastError
 local engine
 local optics
 local subjects
+local meter
 local scriptPath = assert(debug.getinfo(1, "S").source:match("^@(.+[\\/])"))
 local buildFinder = dofile(scriptPath .. "finder.lua")
 local buildStudio = dofile(scriptPath .. "studio_ui.lua")
 local film = dofile(scriptPath .. "film.lua")
+local exposure = dofile(scriptPath .. "exposure.lua")
 local settings = { stock=1, frame=1, pose=1, reticle=1 }
 local reticles = { "Square", "Circle", "None" }
-local studioCards = { "photos", "lens", "film", "frame", "subjects" }
-local lensCard, frameCard = 2, 4
+local studioCards = { "photos", "lens", "film", "frame", "exposure", "subjects" }
+local lensCard, frameCard, exposureCard = 2, 4, 5
 local assetPath = scriptPath .. "../Assets/"
 
 local function log(message)
@@ -62,7 +64,8 @@ local function load(path)
 end
 
 local ue = { valid = valid, object = object, call = call, load = load }
-local binds = dofile(scriptPath .. "bindings.lua")(ue, log)
+local binds = dofile(scriptPath .. "bindings.lua")(ue, log, exposure)
+local pad = dofile(scriptPath .. "gamepad.lua")(ue, binds)
 local bindingsLoaded
 local audio = dofile(scriptPath .. "audio.lua")(ue, assetPath, log)
 local lensTransition = .19
@@ -112,29 +115,38 @@ local function releaseFilm(active)
 end
 
 local function applyFilm(active)
-    if active.stock ~= 1 then
-        if not valid(grainTexture) then
-            local path = "/Engine/EngineResources/FilmGrains/Marcie_Grain_v3_128_M2_000"
-            grainTexture = load(path .. ".Marcie_Grain_v3_128_M2_000")
-        end
-        if system():GetConsoleVariableIntValue("r.FilmGrain") == 0 then
-            system():ExecuteConsoleCommand(active.pc,"r.FilmGrain 1",active.pc)
-            active.restoreGrain = true
-        end
-    else
-        releaseFilm(active)
+    if not valid(grainTexture) then
+        local path = "/Engine/EngineResources/FilmGrains/Marcie_Grain_v3_128_M2_000"
+        grainTexture = load(path .. ".Marcie_Grain_v3_128_M2_000")
     end
-    film.apply(active.lens,active.stock,valid(grainTexture) and grainTexture or nil)
+    if not active.restoreGrain and system():GetConsoleVariableIntValue("r.FilmGrain") == 0 then
+        system():ExecuteConsoleCommand(active.pc,"r.FilmGrain 1",active.pc)
+        active.restoreGrain = true
+    end
+    local grain, size = exposure.grain(active.exposure.iso)
+    film.apply(active.lens,active.stock,valid(grainTexture) and grainTexture or nil,grain,size)
+end
+
+local function applyExposure(active, force)
+    if exposure.mode == 1 and active.meterActor then meter.release(active) end
+    local previous = active.exposure
+    local values = exposure.solve(exposure, active.sceneEV)
+    active.exposure = values
+    if active.raised then
+        if force or not previous or values.aperture ~= previous.aperture then optics.apply(active) end
+        if force or not previous or values.iso ~= previous.iso then applyFilm(active) end
+        if force or not previous or values.ev ~= previous.ev or values.speed ~= previous.speed then
+            local stock = active.firstPerson.PostProcessBlendWeight > 0 and active.firstPerson.PostProcessSettings
+            exposure.apply(active.lens.PostProcessSettings, values, stock)
+        end
+    end
 end
 
 local function updateFocusLabels(active)
     local ui = active.ui
     if not active.raised or not ui or not valid(ui.widget) then return end
-    local aperture, focus, subject = optics.readout(active)
-    if ui.apertureText ~= aperture then
-        ui.aperture:SetText(FText(aperture))
-        ui.apertureText = aperture
-    end
+    local focus, subject = optics.readout(active)
+    ui.setExposure(exposure.modes[exposure.mode][1],active.exposure,exposure.speedText(active.exposure.speed))
     if ui.focusText ~= focus then
         ui.focus:SetText(FText(focus))
         ui.focusText = focus
@@ -151,7 +163,12 @@ end
 local function updateLabels(active, message)
     local ui = active.ui
     if not ui or not valid(ui.widget) then return end
-    ui.lens:SetText(FText(string.format("%d mm", lenses[lensIndex])))
+    local lens = string.format("%d mm", lenses[lensIndex])
+    if active.raised then
+        lens = string.format("%s   /   %d:%d   /   %s",lens,active.rect.columns,
+            active.rect.rows,film.stocks[settings.stock][1])
+    end
+    ui.lens:SetText(FText(lens))
     ui.setControlActive("walk", slow)
     if active.raised then
         updateFocusLabels(active)
@@ -247,13 +264,14 @@ local function removeOverlay(active)
     active.ui = nil
 end
 
-local function rebuildOverlay(active, rect)
+local function rebuildOverlay(active, rect, controlsOnly)
     removeOverlay(active)
     active.rect = rect
-    active.ui = buildFinder(ue, active.pc, rect, active.raised, assetPath, binds, settings.reticle)
-    applyLens(active)
-    if active.raised then applyFilm(active) end
-    optics.apply(active)
+    active.ui = buildFinder(ue, active.pc, rect, active.raised, assetPath, binds, settings.reticle, active.controller)
+    if not controlsOnly then
+        applyLens(active)
+        applyExposure(active,true)
+    end
     updateLabels(active)
     active.ui.visible(not active.studio and not active.menuOpen)
 end
@@ -301,6 +319,7 @@ end
 
 optics = dofile(scriptPath .. "optics.lua")(ue, system, cameraPose, updateFocusLabels, binds)
 subjects = dofile(scriptPath .. "subjects.lua")(ue, system, cameraPose, log)
+meter = dofile(scriptPath .. "meter.lua")(ue, cameraPose, log)
 
 local function trackCamera(active)
     local location, rotation = cameraPose(active)
@@ -369,24 +388,28 @@ local function refreshStudio(active)
     active.studio.update(active.studioCard,{
         photos={"Photo folder","Open in File Explorer","folder"},
         lens={string.format("%d mm",lenses[lensIndex]),"Focal length","lens"..lenses[lensIndex],binds.aimScaling()},
-        film={stock[1],stock[3],stock[2],stock.grain or 0},
+        film={stock[1],stock[3],stock[2]},
         frame={frame[1].."  "..x..":"..y,orientation,
             "frame"..settings.frame..(portrait and x~=y and "p" or "")},
         subjects={subjects.poses[settings.pose][1],"Robert","subject"..settings.pose},
-    },portrait,x==y,reticles[settings.reticle])
+    },portrait,x==y,reticles[settings.reticle],exposure,active.controller)
     active.studio.notice("")
 end
 
 local function buildOptions(active, rect)
     local focused
     if active.studio then
-        if active.studioKeyPage == active.keyPage then focused = active.studio.focused() end
+        if active.studioKeyPage == active.keyPage and active.studioExposurePage == active.exposurePage then
+            focused = active.studio.focused()
+        end
         active.studio.close()
     end
-    active.studio = buildStudio(ue,active.pc,rect,assetPath,binds,studioCards,active.keyPage,active.raised)
+    active.studio = buildStudio(ue,active.pc,rect,assetPath,binds,studioCards,active.keyPage,active.raised,
+        active.exposurePage, exposure)
     active.studioKeyPage = active.keyPage
     if focused then active.studio.focus(focused.action,focused.step,focused.card) end
     active.studioRect = rect
+    active.studioExposurePage = active.exposurePage
     refreshStudio(active)
 end
 
@@ -396,6 +419,7 @@ local function closeStudio(active)
     active.studio = nil
     active.studioRect = nil
     active.studioKeyPage = nil
+    active.exposurePage, active.studioExposurePage = nil,nil
     active.keyPage, active.keyCapture, active.keyNotice, active.keyReset = nil,nil,nil,nil
     setStudioCursor(active,false)
     setStudioInput(active,false)
@@ -436,6 +460,7 @@ local function stow(departing)
     local pc = departing and active.pc or localPlayer()
     local pawn = departing and active.pawn or (valid(pc) and gameplay():GetPlayerPawn(pc, 0)) or nil
     local steps = {
+        function() meter.release(active) end,
         function() optics.release(active, pc or active.pc) end,
         function() releaseFilm(active) end,
         function() releaseView(active, pc, pawn) end,
@@ -464,7 +489,7 @@ local function requestStow()
     state.stowAt = gameplay():GetRealTimeSeconds(state.pc) + .23
 end
 
-local function equip(pc, pawn)
+local function equip(pc, pawn, controller)
     if state then requestStow(); return end
     if not valid(pawn) then
         log("Camera needs a possessed player pawn.")
@@ -487,7 +512,8 @@ local function equip(pc, pawn)
         log("No active player camera and movement component are available.")
         return
     end
-    state = { pc = pc, pawn = pawn, firstPerson = firstPerson, movement = movement, raised = false, menuOpen = false, stock = settings.stock }
+    state = { pc = pc, pawn = pawn, firstPerson = firstPerson, movement = movement, raised = false,
+        menuOpen = false, stock = settings.stock, controller = controller }
     rebuildOverlay(state, gate(pc))
     updateWalk(state)
     present(state, "equip")
@@ -508,6 +534,8 @@ local function raiseOrLower()
         releaseView(active, active.pc, active.pawn)
         optics.release(active, active.pc)
         releaseFilm(active)
+        meter.release(active)
+        active.meterFailed = nil
         active.subjectDistance, active.subjectCheck = nil, nil
         active.focusGoal = nil
     else
@@ -536,6 +564,22 @@ local function changeLens(direction)
     if state.raised then optics.apply(state) end
     updateLabels(state)
     present(state, "lens", nil, direction)
+end
+
+local function changeFilm(active, step)
+    settings.stock = (settings.stock - 1 + step) % #film.stocks + 1
+    active.stock = settings.stock
+    if active.raised then applyFilm(active) end
+    updateLabels(active)
+end
+
+local function changeRatio(active, step)
+    if pending then return end
+    settings.frame = (settings.frame - 1 + step) % #film.frames + 1
+    if not active.studio then
+        rebuildOverlay(active, gate(active.pc,active.portrait))
+        present(active, "frame")
+    end
 end
 
 local function toggleFrame()
@@ -574,6 +618,22 @@ local function toggleWalk()
     present(state, "walk", slow and "SLOW WALK ON" or "SLOW WALK OFF")
 end
 
+local function updateExposure(active, force)
+    applyExposure(active,force)
+    updateLabels(active)
+end
+
+local function adjustExposure(active, setting, direction)
+    if pending or not active.raised then return end
+    local auto = (setting == "aperture" and active.exposure.apertureAuto)
+        or (setting == "shutter" and active.exposure.shutterAuto)
+        or (setting == "iso" and active.exposure.isoAuto)
+    if auto then updateLabels(active,"CAMERA SETS "..setting:upper()); return end
+    if not exposure.step(setting,direction) then return end
+    updateExposure(active,setting=="mode")
+    present(active,"aperture")
+end
+
 local function adjustOptics(effect, direction)
     local active = state
     if not active or not active.raised then return end
@@ -586,8 +646,8 @@ local function adjustOptics(effect, direction)
     elseif effect == "mode" then
         optics.toggleManual(active)
         present(active, effect, optics.manual and "MANUAL FOCUS" or "CONTINUOUS AUTOFOCUS")
-    elseif optics.stepAperture(active, direction) then
-        present(active, effect)
+    elseif effect == "aperture" then
+        adjustExposure(active,effect,direction)
     end
 end
 
@@ -650,8 +710,9 @@ local function shutter()
     local path
     repeat
         shotNumber = shotNumber + 1
-        path = string.format("%sVHOLUME_%s_%03d_%dmm_%s_%dx%d.png", dir,
-            os.date("%Y%m%d_%H%M%S"), shotNumber, lenses[lensIndex],film.stocks[active.stock][2],
+        path = string.format("%sVHOLUME_%s_%03d_%dmm_%s_ISO%d_%dx%d.png", dir,
+            os.date("%Y%m%d_%H%M%S"), shotNumber, lenses[lensIndex],
+            film.stocks[active.stock][2]:gsub("%-%d+$",""), active.exposure.iso,
             current.columns,current.rows)
         local file = io.open(path, "rb")
         if file then file:close() else break end
@@ -760,6 +821,41 @@ local function changeKeyPage(active, page)
     end
 end
 
+local function studioExposure(active, target, pressed)
+    if target and target.action == "exposureBack" or pad.pressed.b then
+        active.exposurePage = nil
+        buildOptions(active,active.studioRect)
+        active.studio.focus("exposureOpen",nil,exposureCard)
+        return
+    end
+    if pressed.up or pressed.down then
+        active.studio.moveExposureFocus(pressed.up and -1 or 1)
+        return
+    end
+    local step = target and target.step
+    local item = target and target.action
+    if not target and (pressed.left or pressed.right) then
+        local focused = active.studio.focused()
+        item = focused and focused.action
+        step = pressed.right and 1 or -1
+    end
+    if pending or not item then return end
+    if item == "exposureMode" and target then
+        exposure.mode = target.step
+    elseif item == "auto" and target then
+        exposure.auto = not exposure.auto
+    elseif item == "minISO" or item == "maxISO" or item == "minShutter" then
+        if not exposure.step(item,step) then return end
+    else
+        return
+    end
+    updateExposure(active,true)
+    refreshStudio(active)
+    if item ~= "exposureMode" and not binds.persist() then
+        active.studio.notice("Could not save exposure settings.")
+    end
+end
+
 local function keybindTick(active, now, target)
     if active.keyCapture then
         if target and target.action == "bindBack" then
@@ -812,10 +908,27 @@ local function studioTick(active, now, tab)
         end
     end
     local pressed = {}
-    for name, input in pairs(studioInputs) do pressed[name] = justPressed(input,active.pc) end
+    local keyboard
+    for name, input in pairs(studioInputs) do
+        pressed[name] = justPressed(input,active.pc)
+        keyboard = keyboard or pressed[name]
+    end
+    if keyboard and active.controller then active.controller = false; refreshStudio(active) end
+    for _, direction in ipairs({"left","right","up","down"}) do
+        pressed[direction] = pressed[direction] or pad.repeating[direction]
+    end
+    pressed.enter = pressed.enter or pad.pressed.a
+    pressed.finder = pressed.finder or pad.pressed.lt
     local layout = object("/Script/UMG.Default__WidgetLayoutLibrary")
     local mouse = layout:GetMousePositionOnViewport(active.pc)
-    local target = active.studio.pointer(mouse.X,mouse.Y,pressed.click)
+    local moved = active.mouseX and (active.mouseX~=mouse.X or active.mouseY~=mouse.Y)
+    active.mouseX,active.mouseY = mouse.X,mouse.Y
+    if moved and active.controller and not pad.touched then
+        active.controller = false
+        active.studio.focus()
+        refreshStudio(active)
+    end
+    local target = active.studio.pointer(not active.controller and mouse.X,not active.controller and mouse.Y,pressed.click)
     if tab ~= nil then
         active.studio.tab(tab)
         local focused = active.studio.focused()
@@ -832,6 +945,15 @@ local function studioTick(active, now, tab)
     local focused = active.studio.focused()
     if not pressed.click and pressed.enter then target = focused end
     if active.keyPage then
+        if pad.pressed.b then
+            if active.keyCapture then
+                cancelKeyCapture(active)
+                refreshStudio(active)
+            else
+                changeKeyPage(active,nil)
+            end
+            return
+        end
         if not active.keyCapture and not target then
             if pressed.left or pressed.right then
                 local direction = pressed.right and 1 or -1
@@ -869,6 +991,11 @@ local function studioTick(active, now, tab)
         raiseOrLower()
         return
     end
+    if active.exposurePage then
+        studioExposure(active,target,pressed)
+        return
+    end
+    if pad.pressed.b then closeOptions(active); return end
     if target and target.action == "aimScaling" then
         active.studioCard = lensCard
         local saved = binds.setAimScaling(not binds.aimScaling())
@@ -907,16 +1034,20 @@ local function studioTick(active, now, tab)
         portrait = target.action == "portrait"
     end
     local card = studioCards[active.studioCard]
+    if (select and card == "exposure") or (target and target.action == "exposureOpen") then
+        active.exposurePage = true
+        buildOptions(active,active.studioRect)
+        active.studio.focus("exposureMode",exposure.mode)
+        return
+    end
     if step ~= 0 or (select and (card == "lens" or card == "film" or card == "frame")) then
         if step == 0 then step = 1 end
         if card == "lens" then
             changeLens(step)
         elseif card == "film" then
-            settings.stock = (settings.stock - 1 + step) % #film.stocks + 1
-            active.stock = settings.stock
-            if active.raised then applyFilm(active) end
+            changeFilm(active,step)
         elseif card == "frame" then
-            settings.frame = (settings.frame - 1 + step) % #film.frames + 1
+            changeRatio(active,step)
         elseif card == "subjects" then
             settings.pose = (settings.pose - 1 + step) % #subjects.poses + 1
         end
@@ -933,6 +1064,88 @@ local function studioTick(active, now, tab)
         return
     end
     active.studio.tick(now)
+end
+
+local function setInputDevice(active, controller)
+    if (active.controller == true) == controller then return end
+    active.controller = controller
+    if active.studio then refreshStudio(active)
+    else rebuildOverlay(active,active.rect,true) end
+end
+
+local dialNames = { aperture="APERTURE", shutter="SHUTTER", iso="ISO",
+    mode="EXPOSURE MODE", ratio="FRAME RATIO", film="FILM", lens="LENS" }
+
+local function mouseDial(active)
+    local dial = binds.dial
+    if not dial then return end
+    local wheel = binds.wheel
+    if wheel == 0 or pending then return end
+    local step = math.min(8, math.max(1, math.floor(math.abs(wheel)+.5))) * (wheel > 0 and 1 or -1)
+    if dial == "lens" then changeLens(step)
+    elseif dial == "ratio" then changeRatio(active,step)
+    elseif dial == "film" then changeFilm(active,step)
+    else adjustExposure(active,dial,step) end
+end
+
+local function controllerTick(active, now)
+    local key, held, repeatKey = pad.pressed, pad.held, pad.repeating
+    local horizontal = (repeatKey.right and 1 or 0) - (repeatKey.left and 1 or 0)
+    local vertical = (repeatKey.up and 1 or 0) - (repeatKey.down and 1 or 0)
+    if key.lt then raiseOrLower(); return end
+    if active.placing then
+        if key.rt then shutter() end
+        if horizontal ~= 0 then rotateSubject(horizontal) end
+        if key.up then cyclePose() end
+        if key.x then undoSubject() end
+        return
+    end
+    if key.rt then shutter(); return end
+    if key.walk then toggleWalk() end
+    local layer = pad.layer()
+    if layer == "exposure" and active.raised then
+        if horizontal ~= 0 then
+            active.padDial = "shutter"
+            adjustExposure(active,"shutter",horizontal)
+        end
+        if vertical ~= 0 then
+            active.padDial = "aperture"
+            adjustExposure(active,"aperture",vertical)
+        end
+    elseif layer == "focus" then
+        if active.raised and key.b and not pending and exposure.mode ~= 1 then
+            exposure.auto = not exposure.auto
+            updateExposure(active,true)
+            local saved = binds.persist()
+            updateLabels(active,saved and (exposure.auto and "AUTO ISO ON" or "AUTO ISO OFF") or "COULD NOT SAVE AUTO ISO")
+        end
+        if key.x then changeFilm(active,1) end
+        if key.y then toggleFrame() end
+        if active.raised and vertical ~= 0 then adjustExposure(active,"iso",vertical) end
+        if horizontal ~= 0 then return optics.moveFocus(active,horizontal,held.a,now) end
+    elseif not layer then
+        if horizontal ~= 0 and (key.left or key.right) then changeLens(horizontal) end
+        if key.down then changeRatio(active,1) end
+        if key.up then adjustExposure(active,"mode",1) end
+        if key.a then adjustOptics("af") end
+        if key.b then adjustOptics("dof") end
+        if key.x then adjustOptics("mode") end
+    end
+end
+
+local function updateDialHint(active)
+    if not active.raised then return end
+    local layer = active.controller and pad.layer()
+    if layer == "exposure" then
+        active.ui.setDial(active.padDial or "shutter","LB + D-PAD   SHUTTER / APERTURE")
+    elseif layer == "focus" then
+        active.ui.setDial("iso","RB + D-PAD   FOCUS / ISO")
+    elseif not active.controller and binds.dial then
+        active.ui.setDial(binds.dial,binds.chord.." + WHEEL   "..dialNames[binds.dial])
+    else
+        active.ui.setDial()
+    end
+    if layer ~= "exposure" then active.padDial = nil end
 end
 
 local function stockMenuOpen(pc)
@@ -956,11 +1169,14 @@ local function tick()
             binds.load(system():GetProjectSavedDirectory():ToString())
             bindingsLoaded = true
         end
-        if valid(pc) then binds.beginFrame(pc) end
         local now = valid(pc) and gameplay():GetRealTimeSeconds(pc) or 0
-        local toggle = false
+        pad.poll(valid(pc) and pc or nil,now)
+        if valid(pc) then
+            binds.beginFrame(pc,state and state.raised and not state.studio and not state.menuOpen and not state.placing)
+        end
+        local toggle, padEquip = pad.pressed.view, pad.pressed.view
         for _, input in ipairs(equipBindings) do
-            if justPressed(input, pc) then toggle = true end
+            if justPressed(input, pc) then toggle, padEquip = true, false end
         end
         if not state and not toggle then return end
         local menuOpen = stockMenuOpen(pc)
@@ -975,7 +1191,8 @@ local function tick()
             stow()
             return
         end
-        local options = justPressed(studioKey,pc)
+        local keyboardOptions = justPressed(studioKey,pc)
+        local options = keyboardOptions or (pad.pressed.y and (state and state.studio or not pad.layer()))
         local place = justPressed(placementKey,pc)
         if state and menuOpen ~= state.menuOpen then
             state.menuOpen = menuOpen
@@ -1010,8 +1227,16 @@ local function tick()
             state.ui.tickEffects(now)
             return
         end
+        if state and pad.touched then setInputDevice(state,true) end
+        if state and (keyboardOptions or place or (state.raised and (binds.dial or binds.wheel ~= 0))) then
+            setInputDevice(state,false)
+        end
         local tab = justPressed(tabKey,pc)
         if state and state.studio then
+            if options and state.exposurePage then
+                studioExposure(state,{action="exposureBack"},{})
+                return
+            end
             if options and state.keyPage then
                 if state.keyCapture then
                     cancelKeyCapture(state)
@@ -1021,7 +1246,7 @@ local function tick()
                 end
                 return
             end
-            if state.keyCapture then
+            if state.keyCapture and not toggle then
                 studioTick(state,now)
                 return
             end
@@ -1034,11 +1259,12 @@ local function tick()
             end
         end
         if toggle then
-            equip(pc, pawn)
+            equip(pc, pawn, padEquip)
             for _, input in ipairs(cameraBindings) do
                 input.pressed = false
                 if state then justPressed(input, pc) end
             end
+            if padEquip then return end
         end
         local active = state
         if not active then return end
@@ -1065,14 +1291,25 @@ local function tick()
         for _, input in ipairs(cameraBindings) do
             if justPressed(input,pc) and (not placing
                     or input.id == "finder" or (input.id == "shoot" and active.placing)) then
+                setInputDevice(active,false)
                 input.action()
             end
         end
+        local padFocus
+        if active.controller then padFocus = controllerTick(active,now) end
+        if active.raised then mouseDial(active) end
         updateWalk(active)
         if active.raised then trackCamera(active) end
         tickLens(active, now)
-        if active.raised then updateLookScales(active) end
+        if active.raised then
+            updateLookScales(active)
+            if exposure.mode ~= 1 and not pending and not active.lensMotion and meter.tick(active,now) then
+                updateExposure(active,false)
+            end
+            updateDialHint(active)
+        end
         local focusInput = optics.tick(active, now)
+        if not focusInput then focusInput = padFocus end
         if focusInput then
             if active.lastEffect == "af_lock" then
                 active.ui.setNotice(nil,now)
@@ -1103,4 +1340,4 @@ else
     LoopInGameThreadWithDelay(1, tick)
 end
 
-log("Ready. Press 5 or F9 to select the 35mm camera.")
+log("Exposure Preview 1.1.0-alpha.1 ready. Press 5, F9, or controller View to equip.")
