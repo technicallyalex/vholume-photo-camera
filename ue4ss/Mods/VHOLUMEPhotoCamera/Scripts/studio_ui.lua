@@ -338,8 +338,8 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
         glyph(icon,px+9*unit,py+5*unit,12*unit)
         label(px+27*unit,py+5*unit,tileW-34*unit,17*unit,9,("%02d  %s"):format(i,card:upper()),quiet)
         if card == "exposure" then
-            block(px+60*unit,py+44*unit,58*unit,42*unit,color(.13,.17,.13))
-            tile.mode = label(px+60*unit,py+51*unit,58*unit,29*unit,20,"",gold,true)
+            block(px+49*unit,py+44*unit,80*unit,42*unit,color(.13,.17,.13))
+            tile.mode = label(px+49*unit,py+51*unit,80*unit,29*unit,20,"",gold,true)
         else
             local clip = add("CanvasPanel",px+(tileW-cellW)/2,py+19*unit,cellW,cellH)
             ue.call(widgetPath.."SetClipping",clip,1)

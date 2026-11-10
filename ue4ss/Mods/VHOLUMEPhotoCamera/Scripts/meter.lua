@@ -1,4 +1,4 @@
-return function(ue, pose, log)
+return function(ue, pose, log, calibrationEV)
     local meter = {}
     local rendering = "/Script/Engine.Default__KismetRenderingLibrary"
     local capturePath = "/Script/Engine.SceneCaptureComponent2D:"
@@ -70,7 +70,10 @@ return function(ue, pose, log)
                 end
             end
         end
-        if weights > 0 then return math.max(-10, math.min(22, weighted / weights - math.log(.18, 2))) end
+        if weights > 0 then
+            local sceneEV = weighted / weights - math.log(.18, 2) + calibrationEV
+            return math.max(-10, math.min(22, sceneEV))
+        end
     end
 
     function meter.tick(active, now)

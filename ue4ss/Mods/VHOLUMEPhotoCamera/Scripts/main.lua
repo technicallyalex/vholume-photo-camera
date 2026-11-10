@@ -319,7 +319,7 @@ end
 
 optics = dofile(scriptPath .. "optics.lua")(ue, system, cameraPose, updateFocusLabels, binds)
 subjects = dofile(scriptPath .. "subjects.lua")(ue, system, cameraPose, log)
-meter = dofile(scriptPath .. "meter.lua")(ue, cameraPose, log)
+meter = dofile(scriptPath .. "meter.lua")(ue, cameraPose, log, exposure.sceneCalibrationEV)
 
 local function trackCamera(active)
     local location, rotation = cameraPose(active)
@@ -1340,4 +1340,4 @@ else
     LoopInGameThreadWithDelay(1, tick)
 end
 
-log("Exposure Preview 1.1.0-alpha.1 ready. Press 5, F9, or controller View to equip.")
+log("Exposure Preview 1.1.0-alpha.2 ready. Press 5, F9, or controller View to equip.")

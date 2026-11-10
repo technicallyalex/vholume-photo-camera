@@ -1,6 +1,6 @@
 # VHOLUME Photo Camera Exposure Preview
 
-**Version 1.1.0-alpha.1** · Windows · Separate preview build
+**Version 1.1.0-alpha.2** · Windows · Separate preview build
 
 ## Install and switch back
 
@@ -63,4 +63,6 @@ The game’s normal pause control still opens its menu. Photos save in **%LOCALA
 
 ## Preview validation
 
-Lua 5.4 checks covered exposure math, ISO limits, grain, input routing, and finder and Studio construction across four simulated viewport sizes. The isolated game copy exited before loading the mod. In-game rendering, GPU meter readback, and physical controller input still need a play test.
+Alpha.2 calibrates the exposure scale to VHOLUME’s baked lighting. In a live Steam session, the default Manual settings measured −0.26 EV in the test scene. Two saved photos at the same aperture and shutter speed confirmed that ISO 200 rendered brighter than ISO 100.
+
+Live checks also covered the Game exposure path, both priority modes, the minimum and maximum Auto ISO limits, and Aperture Priority’s slower shutter at the ISO ceiling. Simulated controller button states exercised Studio navigation, finder activation, exposure adjustments, Auto ISO, capture, and stowing. Physical controller detection and Steam Input mapping remain unverified.

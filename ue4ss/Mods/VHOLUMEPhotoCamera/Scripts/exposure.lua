@@ -6,6 +6,9 @@ local exposure = {
     isos = {100,125,160,200,250,320,400,500,640,800,1000,1250,1600,2000,2500,3200,4000,5000,6400},
     mode = 1, aperture = 7, shutter = 22, iso = 1,
     auto = false, minISO = 1, maxISO = 13, minShutter = 19,
+    -- VHOLUME's baked lighting uses game-relative HDR values. Map those
+    -- values to camera EV without changing the size of an exposure stop.
+    sceneCalibrationEV = 10,
 }
 
 local apertures, speeds, isos = exposure.apertures, exposure.speeds, exposure.isos
@@ -140,7 +143,7 @@ function exposure.apply(pp, values, stock)
         -- exposure independent of the camera's DOF toggle and lens metadata.
         pp.AutoExposureMethod = 2 -- AEM_Manual
         pp.AutoExposureApplyPhysicalCameraExposure = false
-        pp.AutoExposureBias = -values.ev
+        pp.AutoExposureBias = exposure.sceneCalibrationEV - values.ev
         -- Unreal's velocity blur approximates the selected integration time.
         local fps = math.min(60, math.floor(values.speed))
         pp.MotionBlurTargetFPS = fps
