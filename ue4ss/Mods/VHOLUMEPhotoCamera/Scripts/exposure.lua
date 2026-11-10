@@ -1,11 +1,13 @@
+local extendedShutterSteps = 9
 local exposure = {
     modes = {{"GAME","Game exposure"}, {"M","Manual"}, {"A","Aperture Priority"}, {"S","Shutter Priority"}},
     apertures = {1,1.1,1.2,1.4,1.6,1.8,2,2.2,2.5,2.8,3.2,3.5,4,4.5,5,5.6,6.3,7.1,8,9,10,11,13,14,16},
-    speeds = {1,1.25,1.6,2,2.5,3.2,4,5,6,8,10,13,15,20,25,30,40,50,60,80,100,125,
+    speeds = {1/8,1/6,1/5,1/4,1/3.2,1/2.5,1/2,1/1.6,1/1.25,
+        1,1.25,1.6,2,2.5,3.2,4,5,6,8,10,13,15,20,25,30,40,50,60,80,100,125,
         160,200,250,320,400,500,640,800,1000,1250,1600,2000,2500,3200,4000},
     isos = {100,125,160,200,250,320,400,500,640,800,1000,1250,1600,2000,2500,3200,4000,5000,6400},
-    mode = 1, aperture = 7, shutter = 22, iso = 1,
-    auto = false, minISO = 1, maxISO = 13, minShutter = 19,
+    mode = 1, aperture = 7, shutter = 22 + extendedShutterSteps, iso = 1,
+    auto = false, minISO = 1, maxISO = 13, minShutter = 19 + extendedShutterSteps,
     -- VHOLUME's baked lighting uses game-relative HDR values. Map those
     -- values to camera EV without changing the size of an exposure stop.
     sceneCalibrationEV = 10,
@@ -73,7 +75,7 @@ function exposure.solve(config, sceneEV)
 end
 
 function exposure.speedText(speed)
-    if speed == 1 then return "1 s" end
+    if speed <= 1 then return string.format("%g s",1/speed) end
     return string.format("1/%g s", speed)
 end
 
@@ -105,13 +107,15 @@ function exposure.loadOptions(body)
     local low = option("minISO", exposure.minISO, #isos)
     local high = option("maxISO", exposure.maxISO, #isos)
     if low <= high then exposure.minISO, exposure.maxISO = low, high end
-    exposure.minShutter = option("minShutter", exposure.minShutter, #speeds)
+    exposure.minShutter = option("minShutterExtended",
+        option("minShutter", 19, #speeds - extendedShutterSteps) + extendedShutterSteps, #speeds)
     exposure.auto = body:match("[\r\n]autoISO=1[\r\n]") ~= nil
 end
 
 function exposure.optionLines()
     return {"autoISO=" .. (exposure.auto and "1" or "0"), "minISO=" .. exposure.minISO,
-        "maxISO=" .. exposure.maxISO, "minShutter=" .. exposure.minShutter}
+        "maxISO=" .. exposure.maxISO, "minShutterExtended=" .. exposure.minShutter,
+        "minShutter=" .. math.max(1,exposure.minShutter - extendedShutterSteps)}
 end
 
 local stockFields = {"AutoExposureMethod", "AutoExposureApplyPhysicalCameraExposure", "AutoExposureBias",
@@ -145,9 +149,9 @@ function exposure.apply(pp, values, stock)
         pp.AutoExposureApplyPhysicalCameraExposure = false
         pp.AutoExposureBias = exposure.sceneCalibrationEV - values.ev
         -- Unreal's velocity blur approximates the selected integration time.
-        local fps = math.min(60, math.floor(values.speed))
+        local fps = math.max(1,math.min(60,math.floor(values.speed)))
         pp.MotionBlurTargetFPS = fps
-        pp.MotionBlurAmount = fps / values.speed
+        pp.MotionBlurAmount = math.min(1,fps / values.speed)
         pp.MotionBlurMax = 5
     end
 end

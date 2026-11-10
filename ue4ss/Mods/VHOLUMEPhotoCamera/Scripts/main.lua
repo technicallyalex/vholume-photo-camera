@@ -10,6 +10,7 @@ local engine
 local optics
 local subjects
 local meter
+local motion
 local scriptPath = assert(debug.getinfo(1, "S").source:match("^@(.+[\\/])"))
 local buildFinder = dofile(scriptPath .. "finder.lua")
 local buildStudio = dofile(scriptPath .. "studio_ui.lua")
@@ -320,6 +321,7 @@ end
 optics = dofile(scriptPath .. "optics.lua")(ue, system, cameraPose, updateFocusLabels, binds)
 subjects = dofile(scriptPath .. "subjects.lua")(ue, system, cameraPose, log)
 meter = dofile(scriptPath .. "meter.lua")(ue, cameraPose, log, exposure.sceneCalibrationEV)
+motion = dofile(scriptPath .. "motion.lua")(ue, cameraPose)
 
 local function trackCamera(active)
     local location, rotation = cameraPose(active)
@@ -453,6 +455,20 @@ local function openPhotos(active)
     active.studio.notice(opened and "PHOTO FOLDER OPENED" or "COULD NOT OPEN PHOTO FOLDER")
 end
 
+local function releaseMotion(shot)
+    local ok, err = pcall(motion.release,shot)
+    if not ok then log("Exposure cleanup: " .. tostring(err)) end
+end
+
+local function abortMotion(active, message)
+    local shot = pending
+    if not shot or not shot.duration or shot.owner ~= active then return end
+    pending = nil
+    releaseMotion(shot)
+    if shot.exportStarted then os.remove(shot.partPath) end
+    if message then updateLabels(active,message) end
+end
+
 local function stow(departing)
     if not state then return end
     local active = state
@@ -460,6 +476,7 @@ local function stow(departing)
     local pc = departing and active.pc or localPlayer()
     local pawn = departing and active.pawn or (valid(pc) and gameplay():GetPlayerPawn(pc, 0)) or nil
     local steps = {
+        function() abortMotion(active) end,
         function() meter.release(active) end,
         function() optics.release(active, pc or active.pc) end,
         function() releaseFilm(active) end,
@@ -654,13 +671,28 @@ end
 local function pngDimensions(path)
     local file = io.open(path, "rb")
     if not file then return end
-    local head = file:read(24)
-    local finish = file:seek("end", -12) and file:read(12)
-    file:close()
-    if head and #head == 24 and head:sub(1, 8) == "\137PNG\13\10\26\10"
-            and finish and finish:sub(5, 8) == "IEND" then
-        return string.unpack(">I4I4", head, 17)
+    local head = file:read(33)
+    if head and #head == 33 and head:sub(1, 16) == "\137PNG\13\10\26\10\0\0\0\13IHDR" then
+        -- Unreal's exporter can pad the file after IEND.
+        local hasImageData = false
+        while true do
+            local header = file:read(8)
+            if not header or #header ~= 8 then break end
+            local size, kind = string.unpack(">I4c4",header)
+            if kind == "IEND" then
+                local crc = size == 0 and file:read(4)
+                file:close()
+                if hasImageData and crc == "\174\66\96\130" then
+                    local width, height = string.unpack(">I4I4",head,17)
+                    return width, height
+                end
+                return
+            end
+            if kind == "IDAT" and size > 0 then hasImageData = true end
+            if not file:seek("cur",size+4) then break end
+        end
     end
+    file:close()
 end
 
 local function finishShot(shot, tries)
@@ -686,6 +718,47 @@ local function finishShot(shot, tries)
     end
 end
 
+local function motionFailed(shot, reason)
+    log("Motion exposure: " .. tostring(reason))
+    abortMotion(shot.owner,"EXPOSURE FAILED")
+end
+
+local function tickMotion(shot, now)
+    local active = shot.owner
+    local ok, reason = pcall(function()
+        local done, remaining = motion.tick(shot,now)
+        if done or now >= (shot.checkAt or 0) then
+            shot.checkAt = now + .25
+            local current = gate(active.pc,active.portrait)
+            if current.width ~= active.rect.width or current.height ~= active.rect.height
+                    or current.dpi ~= active.rect.dpi then
+                abortMotion(active)
+                rebuildOverlay(active,current)
+                updateLabels(active,"EXPOSURE CANCELLED")
+                return
+            end
+        end
+        if not done then
+            local seconds = math.ceil(remaining * 10)
+            if seconds ~= shot.remaining then
+                active.ui.setNotice(string.format("EXPOSING  %.1f s",seconds / 10),now)
+                shot.remaining = seconds
+            end
+            return
+        end
+        shot.exportStarted = true
+        motion.save(shot)
+        local width, height = pngDimensions(shot.partPath)
+        assert(width == shot.width and height == shot.height,"Invalid motion exposure PNG")
+        assert(os.rename(shot.partPath,shot.path))
+        releaseMotion(shot)
+        log(string.format("Motion exposure %.3f s, %d samples",shot.duration,shot.samples))
+        active.ui.playEffect("shutter",now)
+        finishShot(shot,0)
+    end)
+    if not ok then motionFailed(shot,reason) end
+end
+
 local function shutter()
     local active = state
     if active and active.placing then
@@ -697,7 +770,8 @@ local function shutter()
         updateLabels(active,"SAVING PHOTO")
         return
     end
-    if gameplay():GetRealTimeSeconds(active.pc) < active.readyAt then
+    local now = gameplay():GetRealTimeSeconds(active.pc)
+    if now < active.readyAt then
         updateLabels(active,"CAMERA READYING")
         return
     end
@@ -714,10 +788,23 @@ local function shutter()
             os.date("%Y%m%d_%H%M%S"), shotNumber, lenses[lensIndex],
             film.stocks[active.stock][2]:gsub("%-%d+$",""), active.exposure.iso,
             current.columns,current.rows)
-        local file = io.open(path, "rb")
+        local file = io.open(path, "rb") or io.open(path:gsub("%.png$",".part.png"),"rb")
         if file then file:close() else break end
     until false
     local shot = { path = path, width = current.w, height = current.h, owner = active }
+    if exposure.mode ~= 1 and active.exposure.speed <= 15 then
+        shot.duration = 1 / active.exposure.speed
+        shot.partPath = path:gsub("%.png$",".part.png")
+        shot.width, shot.height = motion.dimensions(current)
+        shot.startedAt, shot.accumulated = now, 0
+        pending = shot
+        local ok, reason = pcall(motion.start,shot,current)
+        if not ok then motionFailed(shot,reason); return end
+        audio.play(active,"shutter",now)
+        active.ui.pulseControl("shoot",now)
+        active.ui.setNotice("EXPOSING",now)
+        return
+    end
     local command = string.format('HighResShot filename="%s" 1 %d %d %d %d 0 0 0 0',
         path, current.x, current.y, current.w, current.h)
     system():ExecuteConsoleCommand(active.pc, command, active.pc)
@@ -1194,6 +1281,7 @@ local function tick()
         local keyboardOptions = justPressed(studioKey,pc)
         local options = keyboardOptions or (pad.pressed.y and (state and state.studio or not pad.layer()))
         local place = justPressed(placementKey,pc)
+        if menuOpen and state then abortMotion(state,"EXPOSURE CANCELLED") end
         if state and menuOpen ~= state.menuOpen then
             state.menuOpen = menuOpen
             updateLookScales(state)
@@ -1225,6 +1313,25 @@ local function tick()
         if menuOpen then return end
         if state and state.stowAt then
             state.ui.tickEffects(now)
+            return
+        end
+        if pending and pending.duration then
+            local active = pending.owner
+            local lower = pad.pressed.lt
+            for _,input in ipairs(cameraBindings) do
+                if justPressed(input,pc) and input.id == "finder" then lower = true end
+            end
+            if toggle or lower then
+                abortMotion(active)
+                if toggle then requestStow() else raiseOrLower() end
+                updateLabels(active,"EXPOSURE CANCELLED")
+                return
+            end
+            updateWalk(active)
+            trackCamera(active)
+            updateLookScales(active)
+            tickMotion(pending,now)
+            active.ui.tickEffects(now)
             return
         end
         if state and pad.touched then setInputDevice(state,true) end
@@ -1340,4 +1447,4 @@ else
     LoopInGameThreadWithDelay(1, tick)
 end
 
-log("Exposure Preview 1.1.0-alpha.2 ready. Press 5, F9, or controller View to equip.")
+log("Exposure Preview 1.1.0-alpha.3 ready. Press 5, F9, or controller View to equip.")
