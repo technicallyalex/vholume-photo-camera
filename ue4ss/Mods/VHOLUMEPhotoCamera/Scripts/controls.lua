@@ -8,10 +8,21 @@ return function(ue, ui, draw, unit)
 
     local function refresh(chip, pulse)
         local level = math.max(chip.active and .55 or 0, pulse)
+        if chip.label then
+            local highlighted = level > 0
+            if chip.highlighted == highlighted then return end
+            chip.highlighted = highlighted
+            chip.label:SetColorAndOpacity({ SpecifiedColor = highlighted and chip.highlight or chip.color, ColorUseRule = 0 })
+            return
+        end
         chip.back:SetBrushColor({
             R = .027 + .20 * level, G = .039 + .12 * level,
             B = .033 + .043 * level, A = .96,
         })
+    end
+
+    function ui.trackControl(id, label, color, highlight)
+        chips[id] = { label = label, color = color, highlight = highlight, highlighted = false }
     end
 
     local glyphWidths = { [" "]=.31, I=.34, W=.96, M=.91, i=.30, l=.33, t=.40, f=.39, ["/"]=.49 }

@@ -13,11 +13,12 @@ local meter
 local motion
 local scriptPath = assert(debug.getinfo(1, "S").source:match("^@(.+[\\/])"))
 local buildFinder = dofile(scriptPath .. "finder.lua")
+local finderLayout = dofile(scriptPath .. "finder_layout.lua")
 local buildStudio = dofile(scriptPath .. "studio_ui.lua")
 local film = dofile(scriptPath .. "film.lua")
 local exposure = dofile(scriptPath .. "exposure.lua")
 local settings = { stock=1, frame=1, pose=1, reticle=1 }
-local reticles = { "Square", "Circle", "None" }
+local reticles = { "Optical", "Square", "Circle", "None" }
 local studioCards = { "photos", "lens", "film", "frame", "exposure", "subjects" }
 local lensCard, frameCard, exposureCard = 2, 4, 5
 local assetPath = scriptPath .. "../Assets/"
@@ -89,20 +90,13 @@ local function gate(pc, portrait)
     local w, h = math.floor(size.X), math.floor(size.Y)
     if portrait == nil then portrait = h > w end
     local columns, rows = film.ratio(settings.frame, portrait)
-    local full = math.min(w / columns, h / rows)
-    local tall = h > w
-    local unit = math.min(w / (tall and 540 or 960), h / 540)
-    local limit = (h - (tall and 154 or 112) * unit) / rows
-    local frames = math.floor(math.min(full * .85, limit) / 2) * 2
-    assert(frames * math.min(columns, rows) >= 64, "Viewport is too small for the photo camera")
-    local width, height = frames * columns, frames * rows
-    local filmWidth = portrait and math.min(24,36*columns/rows) or math.min(36,24*columns/rows)
-    return {
-        width = w, height = h, dpi = math.max(0.01, layout:GetViewportScale(pc)),
-        x = math.floor((w - width) / 2), y = math.floor((h - height) / 2),
-        w = width, h = height, fullWidth = full * columns, portrait = portrait,
-        filmWidth = filmWidth, columns = columns, rows = rows,
-    }
+    local rect = finderLayout(w,h,columns,rows)
+    rect.width, rect.height = w,h
+    rect.dpi = math.max(0.01,layout:GetViewportScale(pc))
+    rect.fullWidth = math.min(w,h*columns/rows)
+    rect.filmWidth = portrait and math.min(24,36*columns/rows) or math.min(36,24*columns/rows)
+    rect.portrait, rect.columns, rect.rows = portrait,columns,rows
+    return rect
 end
 
 local grainTexture
@@ -164,14 +158,11 @@ end
 local function updateLabels(active, message)
     local ui = active.ui
     if not ui or not valid(ui.widget) then return end
-    local lens = string.format("%d mm", lenses[lensIndex])
-    if active.raised then
-        lens = string.format("%s   /   %d:%d   /   %s",lens,active.rect.columns,
-            active.rect.rows,film.stocks[settings.stock][1])
-    end
-    ui.lens:SetText(FText(lens))
+    ui.lens:SetText(FText(string.format("%d mm",lenses[lensIndex])))
     ui.setControlActive("walk", slow)
     if active.raised then
+        ui.setFrameNumber(shotNumber+1)
+        ui.setFormat(film.stocks[settings.stock][1])
         updateFocusLabels(active)
     else
         local format = active.rect.portrait and "PORTRAIT" or "LANDSCAPE"
@@ -1160,9 +1151,6 @@ local function setInputDevice(active, controller)
     else rebuildOverlay(active,active.rect,true) end
 end
 
-local dialNames = { aperture="APERTURE", shutter="SHUTTER", iso="ISO",
-    mode="EXPOSURE MODE", ratio="FRAME RATIO", film="FILM", lens="LENS" }
-
 local function mouseDial(active)
     local dial = binds.dial
     if not dial then return end
@@ -1192,11 +1180,9 @@ local function controllerTick(active, now)
     local layer = pad.layer()
     if layer == "exposure" and active.raised then
         if horizontal ~= 0 then
-            active.padDial = "shutter"
             adjustExposure(active,"shutter",horizontal)
         end
         if vertical ~= 0 then
-            active.padDial = "aperture"
             adjustExposure(active,"aperture",vertical)
         end
     elseif layer == "focus" then
@@ -1224,15 +1210,14 @@ local function updateDialHint(active)
     if not active.raised then return end
     local layer = active.controller and pad.layer()
     if layer == "exposure" then
-        active.ui.setDial(active.padDial or "shutter","LB + D-PAD   SHUTTER / APERTURE")
+        active.ui.setDial("shutter","aperture")
     elseif layer == "focus" then
-        active.ui.setDial("iso","RB + D-PAD   FOCUS / ISO")
+        active.ui.setDial("iso",pad.held.a and "fine" or "focus")
     elseif not active.controller and binds.dial then
-        active.ui.setDial(binds.dial,binds.chord.." + WHEEL   "..dialNames[binds.dial])
+        active.ui.setDial(binds.dial)
     else
         active.ui.setDial()
     end
-    if layer ~= "exposure" then active.padDial = nil end
 end
 
 local function stockMenuOpen(pc)
@@ -1447,4 +1432,4 @@ else
     LoopInGameThreadWithDelay(1, tick)
 end
 
-log("Exposure Preview 1.1.0-alpha.3 ready. Press 5, F9, or controller View to equip.")
+log("Optical Finder Preview 1.1.0-alpha.4 ready. Press 5, F9, or controller View to equip.")

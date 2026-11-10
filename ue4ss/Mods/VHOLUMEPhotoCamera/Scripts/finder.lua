@@ -1,11 +1,12 @@
 local directory = assert(debug.getinfo(1, "S").source:match("^@(.+[\\/])"))
 local buildControls = dofile(directory .. "controls.lua")
 local buildAnimation = dofile(directory .. "animation.lua")
+local buildHUD = dofile(directory .. "finder_hud.lua")
 
 return function(ue, pc, rect, raised, assetPath, binds, reticle, controller)
     local ui = { raised = raised }
     local dpi, w, h = rect.dpi, rect.width, rect.height
-    local unit = math.min(w / (h > w and 540 or 960), h / 540)
+    local unit = rect.unit
     local function rgb(r, g, b, a)
         return { R = r, G = g, B = b, A = a or 1 }
     end
@@ -63,7 +64,8 @@ return function(ue, pc, rect, raised, assetPath, binds, reticle, controller)
         return image
     end
 
-    buildControls(ue, ui, { add = add, block = block, text = text, picture = picture }, unit)
+    local draw = { add = add, block = block, text = text, picture = picture }
+    buildControls(ue, ui, draw, unit)
     local cameraArt
     local toastY
     local formatIcon = rect.portrait and "Controls/portrait" or "Controls/landscape"
@@ -86,89 +88,20 @@ return function(ue, pc, rect, raised, assetPath, binds, reticle, controller)
         block(x - lip, y + fh, fw + lip * 2, lip, edge)
         block(x - lip, y, lip, fh, edge)
         block(x + fw, y, lip, fh, edge)
+        local seam = rgb(.035,.047,.040)
+        block(x - lip, y - lip, fw + lip * 2, unit, seam)
+        block(x - lip, y + fh + lip - unit, fw + lip * 2, unit, seam)
 
-        local tabY = y - 40 * unit
-        local topWidth = math.min(w-20*unit,math.max(fw,400*unit))
-        local topLeft = (w - topWidth) / 2
-        local gap = 4 * unit
-        local cell = (topWidth - 4*gap) / 5
-        local gold = rgb(.94,.69,.38)
-        local good = rgb(.62,.83,.52)
-        local lit = rgb(.18,.17,.10)
-        local fields, backgrounds, autoTags = {}, {}, {}
-        for i, item in ipairs({{"mode","EXPOSURE"},{"aperture","APERTURE"},
-                {"shutter","SHUTTER"},{"iso","SENSITIVITY"},{"meter","METER"}}) do
-            local bx = topLeft+(i-1)*(cell+gap)
-            backgrounds[item[1]] = block(bx,tabY,cell,33*unit,edge)
-            block(bx,tabY,cell,unit,dim)
-            text(bx+5*unit,tabY+3*unit,cell-10*unit,10*unit,7,gold,item[2])
-            fields[item[1]] = text(bx+5*unit,tabY+13*unit,cell-10*unit,18*unit,11,ink)
-            if i >= 2 and i <= 4 then
-                autoTags[item[1]] = text(bx+cell-22*unit,tabY+4*unit,20*unit,9*unit,6,good,"AUTO")
-            end
-        end
-        local last = {}
-        local meterX = topLeft+4*(cell+gap)
-        local meterScale = add("CanvasPanel",meterX+6*unit,tabY+26*unit,cell-12*unit,6*unit)
-        local scaleW = cell-12*unit
-        block(0,2*unit,scaleW,unit,dim,meterScale)
-        for i=0,4 do block(scaleW*i/4,0,unit,5*unit,dim,meterScale) end
-        local needle = block(scaleW/2,0,2*unit,5*unit,good,meterScale)
-        fields.meterWarning = text(meterX+5*unit,tabY+25*unit,cell-9*unit,8*unit,6.5,gold)
-        local function value(id, value)
-            if last[id] == value then return end
-            last[id] = value
-            fields[id]:SetText(FText(value))
-        end
-        function ui.setExposure(mode, values, speed)
-            value("mode",mode)
-            value("aperture",string.format("f/%.1f",values.aperture))
-            value("shutter",speed)
-            value("iso","ISO "..values.iso)
-            for id, tag in pairs(autoTags) do
-                local auto = values[id.."Auto"]
-                if last[id.."Auto"] ~= auto then
-                    ue.call("/Script/UMG.Widget:SetVisibility",tag,auto and 3 or 2)
-                    last[id.."Auto"] = auto
-                end
-            end
-            value("meter",mode=="GAME" and "GAME" or (values.errorEV and
-                string.format("%+.1f EV",values.errorEV) or "NO METER"))
-            value("meterWarning",values.limited or "")
-            local hasMeter = values.errorEV and not values.limited
-            ue.call("/Script/UMG.Widget:SetVisibility",meterScale,hasMeter and 3 or 2)
-            if hasMeter then
-                local offset = math.max(-2,math.min(2,values.errorEV)) * scaleW/4
-                ue.call("/Script/UMG.Widget:SetRenderTranslation",needle,{X=offset/dpi,Y=0})
-            end
-        end
+        buildHUD(ue, ui, rect, binds, controller, draw)
 
-        local readoutX, readoutY = x + 9*unit, y + 9*unit
-        local focusW = math.min(173*unit,fw-18*unit)
-        block(readoutX,readoutY,focusW,30*unit,rgb(.009,.018,.012,.89))
-        local indicators = {}
-        for i, key in ipairs({"near","aligned","far"}) do
-            indicators[i] = picture("Studio/focus-"..key, readoutX+(5+(i-1)*17)*unit,
-                readoutY+3*unit,14*unit,14*unit,.20)
-        end
-        ui.focus = text(readoutX+59*unit,readoutY+2*unit,focusW-62*unit,15*unit,9,ink)
-        ui.subject = text(readoutX+59*unit,readoutY+15*unit,focusW-62*unit,13*unit,8,dim)
-        local lastIndicator
-        function ui.setFocusIndicator(direction)
-            if lastIndicator == direction then return end
-            lastIndicator = direction
-            for i, indicator in ipairs(indicators) do
-                ue.call("/Script/UMG.Widget:SetRenderOpacity",indicator,i == direction and 1 or .20)
-            end
-        end
-
-        if reticle ~= 3 then
+        if reticle ~= 4 then
             local cx, cy = x + fw / 2, y + fh / 2
-            local targetW = math.min(fw, fh) * (reticle == 2 and .24 or .12)
-            local targetH = targetW * (reticle == 2 and 1 or .75)
-            local art = reticle == 2 and "Studio/reticle-circle" or "Controls/focus-ring"
-            ui.focusIdleOpacity = reticle == 2 and .58 or .38
-            ui.focusRing = picture(art, cx - targetW / 2, cy - targetH / 2, targetW, targetH, ui.focusIdleOpacity)
+            local diameter = math.min(fw, fh) * (reticle == 3 and .24 or reticle == 2 and .12 or .21)
+            local targetH = diameter * (reticle == 2 and .75 or 1)
+            local art = reticle == 1 and "Controls/reticle-optical"
+                or reticle == 2 and "Controls/focus-ring" or "Studio/reticle-circle"
+            ui.focusIdleOpacity = reticle == 2 and .38 or .68
+            ui.focusRing = picture(art, cx - diameter / 2, cy - targetH / 2, diameter, targetH, ui.focusIdleOpacity)
         end
         ui.curtain = add("CanvasPanel", x, y, fw, fh)
         ue.call("/Script/UMG.Widget:SetClipping", ui.curtain, 1)
@@ -177,59 +110,6 @@ return function(ue, pc, rect, raised, assetPath, binds, reticle, controller)
         ui.curtainTravel = fh / (2 * dpi)
         ue.call("/Script/UMG.Widget:SetVisibility", ui.curtain, 2)
         toastY = y + fh - 30 * unit
-
-        local infoW = math.min(176*unit,fw*.70)
-        local info = add("CanvasPanel",x+9*unit,y+fh-28*unit,infoW,19*unit)
-        block(0,0,infoW,19*unit,rgb(.009,.018,.012,.89),info)
-        picture(formatIcon,4*unit,3*unit,17*unit,13*unit,1,info)
-        ui.lens = text(25*unit,2.5*unit,infoW-29*unit,16*unit,9,ink,"",info)
-        local dialW = math.min(211*unit,fw*.85)
-        local dialPanel = add("CanvasPanel",x+fw-dialW-9*unit,y+fh-52*unit,dialW,22*unit)
-        block(0,0,dialW,22*unit,rgb(.023,.032,.024,.96),dialPanel)
-        block(0,0,2*unit,22*unit,gold,dialPanel)
-        local dialText = text(7*unit,4*unit,dialW-12*unit,16*unit,9,gold,"",dialPanel)
-        local previousDial, previousHint
-        ue.call("/Script/UMG.Widget:SetVisibility",dialPanel,2)
-        function ui.setDial(id, hint)
-            if id == previousDial and hint == previousHint then return end
-            if backgrounds[previousDial] then backgrounds[previousDial]:SetBrushColor(edge) end
-            if backgrounds[id] then backgrounds[id]:SetBrushColor(lit) end
-            ue.call("/Script/UMG.Widget:SetVisibility",dialPanel,hint and 3 or 2)
-            if hint then dialText:SetText(FText(hint)) end
-            previousDial, previousHint = id, hint
-        end
-
-        local tall = h > w
-        local dockWidth, dockY = math.min(w - 24 * unit, 808 * unit), y + fh + 4 * unit
-        local dockX = (w - dockWidth) / 2
-        block(dockX, dockY, dockWidth, (tall and 69 or 46) * unit, rgb(.018,.029,.023,.96))
-        block(dockX, dockY, dockWidth, unit, rgb(.24,.31,.25))
-        block(dockX, dockY + unit, 2 * unit, (tall and 68 or 45) * unit, rgb(.62,.44,.22))
-        local dockInset, rowWidth = dockX + 7 * unit, dockWidth - 14 * unit
-        local shoot = { "shoot", 104, "TAKE PHOTO", controller and "RT" or key("shoot") }
-        local finder = { "finder", 110, "LOWER FINDER", controller and "LT" or key("finder") }
-        local autofocus = { "af", 132, "SINGLE-SHOT AF", controller and "A" or key("af") }
-        local mode = { "mode", 72, "AF/MF", controller and "X" or key("mode") }
-        local focusKeys = binds.focusTokens()
-        local focus = { "focus", 74, "FOCUS", table.unpack(focusKeys) }
-        local fine = { "fine", 91, "FINE", key("fine"), table.unpack(focusKeys) }
-        local dof = { "dof", 62, "DOF", controller and "B" or key("dof") }
-        local aperture = { "aperture", 93, "APERTURE", "Ctrl", "mouse-wheel" }
-        local shutter = { "speed", 93, "SHUTTER", "Alt", "mouse-wheel" }
-        local iso = { "iso", 93, "ISO", "Ctrl + Alt", "mouse-wheel" }
-        if controller then
-            ui.addControlRow(dockInset,dockY+4*unit,rowWidth,{shoot,finder,autofocus,lens,studio},nil,true)
-            ui.addControlRow(dockInset,dockY+25*unit,rowWidth,{mode,dof,walk,
-                {"exposure",90,"EXPOSURE","LB"}, {"focus",97,"FOCUS / ISO","RB"},
-                {"ratio",87,"MODE / FRAME","↑","↓"}},nil,true)
-        elseif tall then
-            ui.addControlRow(dockInset, dockY + 4 * unit, rowWidth, { shoot, finder, autofocus }, nil, true)
-            ui.addControlRow(dockInset, dockY + 25 * unit, rowWidth, { mode, focus, fine, dof, studio }, nil, true)
-            ui.addControlRow(dockInset, dockY + 46 * unit, rowWidth, { aperture, shutter, iso, lens }, nil, true)
-        else
-            ui.addControlRow(dockInset, dockY + 4 * unit, rowWidth, { shoot, finder, autofocus, lens, frame, studio }, nil, true)
-            ui.addControlRow(dockInset, dockY + 25 * unit, rowWidth, { mode, focus, fine, dof, aperture, shutter, iso }, nil, true)
-        end
     else
         local width = math.min(616 * unit, w - 30 * unit)
         local cardHeight = 91

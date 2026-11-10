@@ -104,19 +104,24 @@ return function(ue, log, exposure)
         return ue.call(down,pc,binds.raw("LeftShift")) or ue.call(down,pc,binds.raw("RightShift"))
     end
 
-    function binds.wheelDial(pc)
+    binds.wheelChords = {
+        mode="Tab + Ctrl", ratio="Tab + Alt", film="Tab + Shift", lens="Tab",
+        iso="Ctrl + Alt", aperture="Ctrl", shutter="Alt",
+    }
+
+    local function wheelDial(pc)
         local function held(name) return ue.call(down,pc,binds.raw(name)) end
         local ctrl = held("LeftControl") or held("RightControl")
         local alt = held("LeftAlt") or held("RightAlt")
         if held("Tab") then
-            if ctrl then return "mode", "Tab + Ctrl" end
-            if alt then return "ratio", "Tab + Alt" end
-            if binds.shiftDown(pc) then return "film", "Tab + Shift" end
-            return "lens", "Tab"
+            if ctrl then return "mode" end
+            if alt then return "ratio" end
+            if binds.shiftDown(pc) then return "film" end
+            return "lens"
         end
-        if ctrl and alt then return "iso", "Ctrl + Alt" end
-        if ctrl then return "aperture", "Ctrl" end
-        if alt then return "shutter", "Alt" end
+        if ctrl and alt then return "iso" end
+        if ctrl then return "aperture" end
+        if alt then return "shutter" end
     end
 
     local function permitted(id, name)
@@ -141,8 +146,10 @@ return function(ue, log, exposure)
     function binds.load(saved)
         if path then return end
         local stable = saved:gsub("[/\\]+$","").."/VHOLUMEPhotoCamera.keys"
-        path = stable..".exposure-preview"
+        local previous = stable..".exposure-preview"
+        path = stable..".finder-preview"
         local file = io.open(path,"rb") or io.open(path..".bak","rb")
+            or io.open(previous,"rb") or io.open(previous..".bak","rb")
             or io.open(stable,"rb") or io.open(stable..".bak","rb")
         if not file then return end
         local body = file:read(8193)
@@ -250,9 +257,9 @@ return function(ue, log, exposure)
     function binds.beginFrame(pc, finderRaised)
         binds.wheel = 0
         wheelEdge = nil
-        binds.dial, binds.chord = nil, nil
+        binds.dial = nil
         if not finderRaised and not wheelShortcut then previousWheel = 0; return end
-        if finderRaised then binds.dial, binds.chord = binds.wheelDial(pc) end
+        if finderRaised then binds.dial = wheelDial(pc) end
         local delta = ue.call(analog,pc,binds.raw("MouseWheelAxis"))
         local up = ue.call(pressed,pc,binds.raw("MouseScrollUp"))
         local downWheel = ue.call(pressed,pc,binds.raw("MouseScrollDown"))

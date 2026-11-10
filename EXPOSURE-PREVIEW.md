@@ -1,14 +1,20 @@
-# VHOLUME Photo Camera Exposure Preview
+# VHOLUME Photo Camera Optical Finder Preview
 
-**Version 1.1.0-alpha.3** · Windows · Separate preview build
+**Version 1.1.0-alpha.4** · Windows · Separate preview build
 
 ## Install and switch back
 
-Close VHOLUME. Extract the preview installer ZIP and run **Install Exposure Preview.cmd**. It detects the Steam installation and moves any existing Photo Camera folder into a dated backup next to the UE4SS Mods folder.
+Close VHOLUME. Extract the preview installer ZIP and run **Install Finder Preview.cmd**. It detects the Steam installation and moves any existing Photo Camera folder into a dated backup next to the UE4SS Mods folder.
 
 For a manual install, back up the existing mod outside **Mods**. Copy **VHOLUMEPhotoCamera** from the manual ZIP’s **ue4ss\Mods** into the game’s **VHOLUME\Binaries\Win64\ue4ss\Mods**. This build uses the same mod slot as the stable release.
 
-To switch back, close the game and reinstall the stable ZIP or move the dated backup back into **Mods** under its original name. Preview keybinds, aim scaling, and Auto ISO options save separately in **VHOLUMEPhotoCamera.keys.exposure-preview**. The preview imports compatible bindings from the stable version the first time it loads.
+To switch back, close the game, move the current **VHOLUMEPhotoCamera** folder out of **Mods**, then move the dated backup into **Mods** and rename it **VHOLUMEPhotoCamera**. You can also reinstall any earlier build from its ZIP. This preview saves keybinds, aim scaling, and Auto ISO options in **VHOLUMEPhotoCamera.keys.finder-preview** and reads compatible settings from the exposure preview or stable build until it has its own settings.
+
+## Optical finder
+
+The raised finder shows a larger, centered capture area. At 1920 × 1080, the 3:2 frame is 1428 × 952 pixels. The aperture plate, focus lamps, exposure meter, and backlit LCD sit outside the capture area. Aspect and film readouts move below the image when the side margins are narrow.
+
+Shortcuts appear directly in the labels for their settings and switch with the active input device. Keyboard labels reflect customized bindings. Hold a wheel modifier or controller shoulder button to highlight the settings it adjusts. Photo Studio’s Frame card offers the new Optical reticle alongside Square, Circle, and None.
 
 ## Exposure
 
