@@ -26,7 +26,9 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - name: Install Lua 5.4 runtime
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq liblua5.4-0
+        timeout-minutes: 3
+        run: |
+          sudo apt-get -o Acquire::Retries=1 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 install -y -qq liblua5.4-0
       - name: Download the released Windows loader bundle
         env:
           GH_TOKEN: ${{ github.token }}

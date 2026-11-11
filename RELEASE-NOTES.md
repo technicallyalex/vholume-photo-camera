@@ -2,6 +2,13 @@
 
 A complete camera controls overhaul, with a dedicated controller layout and modifier + scrollwheel controls for the camera's core functions. Adjust settings directly from the viewfinder, with the relevant shortcuts shown beside each setting.
 
+| Platform | Current build | Download | Testing |
+| --- | --- | --- | --- |
+| **Windows** | **v1.0.2** | [Windows installer](https://github.com/technicallyalex/vholume-photo-camera/releases/download/v1.0.2/VHOLUME-Photo-Camera-v1.0.2-Windows-Installer.zip) · [Windows manual ZIP](https://github.com/technicallyalex/vholume-photo-camera/releases/download/v1.0.2/VHOLUME-Photo-Camera-v1.0.2-Windows-Manual.zip) | Released; in-game Windows checks |
+| **Linux / Proton** | **v1.0.2-linux.2** | [Linux installer package](https://github.com/technicallyalex/vholume-photo-camera/releases/download/v1.0.2/VHOLUME-Photo-Camera-v1.0.2-linux.2-Linux-Proton.zip) | Experimental; automated Ubuntu installer/helper checks |
+
+Linux gameplay, graphics, camera audio, Steam Deck behavior, and physical controller/Steam Input mapping remain unverified. [Linux setup and QA details](https://github.com/technicallyalex/vholume-photo-camera/blob/v1.0.2-linux.2/LINUX.md). The Windows packages retain the original v1.0.2 contents. [Checksums for all packages](https://github.com/technicallyalex/vholume-photo-camera/releases/download/v1.0.2/SHA256SUMS.txt).
+
 - Dedicated controller controls for shooting, autofocus, manual focus, exposure, lens selection, and Studio navigation.
 - A scrollwheel control system for focus, aperture, shutter speed, ISO, lenses, film looks, aspect ratio, and exposure mode, with editable letter-key modifiers and fine-focus adjustment.
 - Camera input priority preserves movement, mouse look, and Ctrl sliding while camera controls are active.
@@ -11,7 +18,7 @@ A complete camera controls overhaul, with a dedicated controller layout and modi
 - Lens DOF multipliers from 1x to 8x, a thirds grid, and new 21:9 and 65:24 formats.
 - A selectable screenshot folder in Photo Studio.
 
-Download **VHOLUME-Photo-Camera-Installer.zip**, close the game, extract it, and run **Install Photo Camera.cmd**. The installer detects Steam and backs up an existing Photo Camera installation. The manual ZIP is also available. Updating replaces the current mod in its existing slot; use the dated backup or an earlier release to switch back.
+**Windows:** close the game, extract the Windows installer ZIP, and run **Install Photo Camera.cmd**. **Linux:** extract the Linux package, run **python3 install-linux.py**, then apply its printed Steam launch option. Both installers detect Steam libraries and back up an existing Photo Camera installation. Use the dated backup or an earlier release to switch back.
 
 Tested with VHOLUME Steam build **26455274** and UE4SS **3.0.1-1011-gb50986bd**. Physical controller hardware and Steam Input mappings remain unverified. Motion capture sample density depends on game frame rate.
 

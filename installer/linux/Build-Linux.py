@@ -66,7 +66,7 @@ def main():
         'Install Photo Camera.sh': (root / 'installer/linux/Install Photo Camera.sh').read_bytes(),
         'README.md': (root / 'LINUX.md').read_bytes(), payload_name: payload.read_bytes(), loader_name: loader}
     entries['SHA256SUMS.txt'] = ''.join(f'{digest(data)}  {name}\n' for name, data in sorted(entries.items())).encode()
-    output = args.output / 'VHOLUME-Photo-Camera-v1.0.2-Linux-Proton.zip'
+    output = args.output / 'VHOLUME-Photo-Camera-v1.0.2-linux.2-Linux-Proton.zip'
     archive(output, entries)
     # Use an ignored extracted copy for installer QA.
     with zipfile.ZipFile(output) as built:

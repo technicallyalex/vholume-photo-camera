@@ -4,7 +4,7 @@
 
 This package runs the Windows Steam edition of VHOLUME through Proton. It includes the camera mod, the same UE4SS loader bundled with the Windows release, a Linux installer, and a native screenshot-folder helper. Python **3.9 or newer** is required. No root access or PowerShell installation is needed.
 
-**Status:** experimental compatibility build. Installer, folder-helper protocol, path conversion, archive integrity, and rollback are checked on the development workstation. A live Linux/Steam Deck gameplay session, camera sound playback, and physical controller/Steam Input mapping have not been verified.
+**Status:** experimental compatibility build. Automated Ubuntu checks cover installation, rollback, real Proton-style drive symlinks, native file locking, folder-helper protocol, Lua 5.4 integration, launcher cleanup, and archive integrity. [View the Linux QA runs](https://github.com/technicallyalex/vholume-photo-camera/actions/workflows/linux-qa.yml). A live Linux/Steam Deck gameplay session, camera sound playback, physical controller/Steam Input mapping, and desktop GUI integration have not been verified.
 
 ## Install
 
@@ -57,7 +57,11 @@ Exposure modes, Auto ISO, motion captures, 1x–8x lens blur, film looks, subjec
 
 Installing over an existing mod moves the entire old mod into a dated **PhotoCamera-backup-…** directory next to `ue4ss/Mods`. Existing UE4SS files and user settings are preserved. To restore, close the game, move the current `VHOLUMEPhotoCamera` folder outside `Mods`, then move the chosen backup into `Mods` and name it `VHOLUMEPhotoCamera`. Remove the Linux launch wrapper if switching back to a package that does not use it.
 
-The installed launch option is also saved in `ue4ss/PhotoCamera-Linux-Launch-Options.txt`. The current Windows release and the developer's installed Steam copy are unchanged by making this package.
+The installed launch option is also saved in `ue4ss/PhotoCamera-Linux-Launch-Options.txt`. The Windows release retains its original contents and has separate installer and manual downloads on the same release page.
+
+## What changed in Linux preview 2
+
+The folder worker survives individual request I/O failures, and desktop tools are closed with bounded cleanup when the game exits. The Windows runtime stays in its original source location; Linux-specific changes are applied from a separate overlay during packaging. Automated QA runs on Ubuntu with Python 3.9 and 3.12 and Lua 5.4. These checks exercise the installer and helper without the proprietary game or a GPU.
 
 ## Upstream references
 
