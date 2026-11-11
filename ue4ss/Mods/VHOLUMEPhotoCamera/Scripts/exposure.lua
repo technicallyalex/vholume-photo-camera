@@ -79,6 +79,26 @@ function exposure.speedText(speed)
     return string.format("1/%g s", speed)
 end
 
+function exposure.help(config, action, mode)
+    if action == "auto" then
+        return config.mode == 1 and "Auto ISO is inactive in Game mode."
+            or "Adjusts ISO within your selected limits."
+    elseif action == "minISO" then return "Lowest sensitivity allowed for Auto ISO."
+    elseif action == "maxISO" then return "Highest sensitivity allowed for Auto ISO."
+    elseif action == "minShutter" then
+        return config.mode == 3 and config.auto and "Shutter target before Auto ISO rises."
+            or "Used in A mode with Auto ISO."
+    end
+    local selected = action == "exposureMode" and mode or config.mode
+    if selected == 1 then return "Game exposure. ISO sets grain." end
+    if selected == 2 then
+        return config.auto and "Set aperture and shutter. ISO is automatic."
+            or "Set aperture, shutter, and ISO."
+    end
+    if selected == 3 then return "Set aperture. The camera sets shutter speed." end
+    return "Set shutter speed. The camera sets aperture."
+end
+
 function exposure.grain(iso)
     local stops = clamp(log2(iso / 100), 0, 6)
     return .07 + .045 * stops + .012 * stops ^ 2, .78 + .14 * stops

@@ -22,6 +22,7 @@ local reticles = { "Optical", "Square", "Circle", "None" }
 local studioCards = { "photos", "lens", "film", "frame", "exposure", "subjects" }
 local lensCard, frameCard, exposureCard = 2, 4, 5
 local assetPath = scriptPath .. "../Assets/"
+local photos = dofile(scriptPath .. "photo_folder.lua")(scriptPath)
 
 local function log(message)
     print("[VHOLUME Photo] " .. tostring(message) .. "\n")
@@ -379,7 +380,7 @@ local function refreshStudio(active)
     local x,y = film.ratio(settings.frame,portrait)
     local orientation = x == y and "Square frame" or (portrait and "Portrait frame" or "Landscape frame")
     active.studio.update(active.studioCard,{
-        photos={"Photo folder","Open in File Explorer","folder"},
+        photos={"Photo output",photos.caption(),"folder"},
         lens={string.format("%d mm",lenses[lensIndex]),"Focal length","lens"..lenses[lensIndex],binds.aimScaling()},
         film={stock[1],stock[3],stock[2]},
         frame={frame[1].."  "..x..":"..y,orientation,
@@ -430,20 +431,11 @@ local function showStudio(active)
 end
 
 local function photoDirectory()
-    local saved = system():GetProjectSavedDirectory():ToString():gsub("[/\\]+$","")
-    return saved .. "/Screenshots/Windows/"
+    return photos.directory()
 end
 
 local function openPhotos(active)
-    local dir = photoDirectory():gsub("/", "\\"):gsub("\\+$","")
-    -- This path is engine-owned. Reject shell expansion and quote every use.
-    if not dir:match("^[A-Za-z]:\\") or dir:find('[%%!"\r\n]') then
-        active.studio.notice("PHOTO FOLDER PATH UNAVAILABLE")
-        return
-    end
-    os.execute('if not exist "'..dir..'" mkdir "'..dir..'"')
-    local opened = os.execute('start "" "%SystemRoot%\\explorer.exe" "'..dir..'"')
-    active.studio.notice(opened and "PHOTO FOLDER OPENED" or "COULD NOT OPEN PHOTO FOLDER")
+    active.studio.notice(photos.open())
 end
 
 local function releaseMotion(shot)
@@ -771,6 +763,7 @@ local function shutter()
         rebuildOverlay(active, current)
         return
     end
+    if not photos.prepare() then updateLabels(active,"PHOTO FOLDER IS NOT WRITABLE"); return end
     local dir = photoDirectory()
     local path
     repeat
@@ -1081,6 +1074,13 @@ local function studioTick(active, now, tab)
         if not saved then active.studio.notice("Could not save sensitivity scaling.") end
         return
     end
+    if target and (target.action == "choosePhotos" or target.action == "resetPhotos") then
+        active.studioCard = 1
+        local message = target.action == "choosePhotos" and photos.choose() or photos.reset()
+        refreshStudio(active)
+        active.studio.notice(message)
+        return
+    end
     local lensStep = pressed.lensPrev and -1 or pressed.lensNext and 1
     if lensStep then
         active.studioCard = lensCard
@@ -1238,8 +1238,17 @@ local function tick()
     guarded(function()
         local pc = localPlayer()
         if not bindingsLoaded and valid(pc) then
-            binds.load(system():GetProjectSavedDirectory():ToString())
+            local saved = system():GetProjectSavedDirectory():ToString()
+            binds.load(saved)
+            photos.load(saved)
             bindingsLoaded = true
+        end
+        if bindingsLoaded then
+            local message = photos.poll()
+            if message then
+                if state and state.studio then refreshStudio(state); state.studio.notice(message)
+                else log(message) end
+            end
         end
         local now = valid(pc) and gameplay():GetRealTimeSeconds(pc) or 0
         pad.poll(valid(pc) and pc or nil,now)
@@ -1432,4 +1441,4 @@ else
     LoopInGameThreadWithDelay(1, tick)
 end
 
-log("Optical Finder Preview 1.1.0-alpha.4 ready. Press 5, F9, or controller View to equip.")
+log("Optical Finder Preview 1.1.0-alpha.5 ready. Press 5, F9, or controller View to equip.")

@@ -5,13 +5,14 @@ return function(width, height, columns, rows)
         return math.floor(math.min((width - 12 * unit) / columns,
             (height - 2 * rail * unit) / rows) / 2) * 2
     end
-    local frames = fit(32)
-    if math.floor((width - frames * columns) / 2) < 120 * unit then frames = fit(47) end
+    local bottomFocus = width/unit < 900
+    local frames = fit(bottomFocus and 62 or 32)
+    if math.floor((width - frames * columns) / 2) < 120 * unit then frames = fit(bottomFocus and 77 or 47) end
     assert(frames * math.min(columns, rows) >= 64, "Viewport is too small for the photo camera")
     local w, h = frames * columns, frames * rows
     local x, y = math.floor((width - w) / 2), math.floor((height - h) / 2)
     return {
         x = x, y = y, w = w, h = h, unit = unit,
-        sideControls = x >= 120 * unit, sideMeter = x >= 42 * unit,
+        sideControls = x >= 120 * unit, bottomFocus = bottomFocus,
     }
 end

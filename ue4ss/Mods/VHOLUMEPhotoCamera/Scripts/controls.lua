@@ -34,6 +34,7 @@ return function(ue, ui, draw, unit)
         end
         return ems * fontSize * 1.34
     end
+    ui.textWidth = textWidth
 
     local function badgeWidth(token)
         if token:sub(1, 6) == "mouse-" then return 20 end

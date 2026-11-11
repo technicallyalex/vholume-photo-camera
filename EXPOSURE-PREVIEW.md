@@ -1,6 +1,6 @@
 # VHOLUME Photo Camera Optical Finder Preview
 
-**Version 1.1.0-alpha.4** · Windows · Separate preview build
+**Version 1.1.0-alpha.5** · Windows · Separate preview build
 
 ## Install and switch back
 
@@ -12,9 +12,15 @@ To switch back, close the game, move the current **VHOLUMEPhotoCamera** folder o
 
 ## Optical finder
 
-The raised finder shows a larger, centered capture area. At 1920 × 1080, the 3:2 frame is 1428 × 952 pixels. The aperture plate, focus lamps, exposure meter, and backlit LCD sit outside the capture area. Aspect and film readouts move below the image when the side margins are narrow.
+The raised finder shows a larger, centered capture area. At 1920 × 1080, the 3:2 frame is 1428 × 952 pixels. A horizontal exposure meter sits above the image. The bottom LCD shows mode, shutter, aperture, ISO, and lens, with segmented camera numerals. Focus lamps and focus controls sit beside the LCD or below it on narrower screens. Aspect and film readouts move below the image when the side margins are narrow.
 
 Shortcuts appear directly in the labels for their settings and switch with the active input device. Keyboard labels reflect customized bindings. Hold a wheel modifier or controller shoulder button to highlight the settings it adjusts. Photo Studio’s Frame card offers the new Optical reticle alongside Square, Circle, and None.
+
+## Screenshot folder
+
+In Photo Studio, select **Photos → Choose Folder** to open the Windows folder chooser. The chosen folder is checked for write access and saved for future sessions. **Open Folder** opens the current destination, and **Use Default** restores the game's screenshot directory. Instant photos and motion exposures both use this destination. Canceling the chooser keeps the previous folder.
+
+Exposure uses a camera-style +/− icon. The exposure settings show a short hint for the hovered or focused control, with the selected mode as the default.
 
 ## Exposure
 
@@ -56,6 +62,8 @@ Right-click raises or lowers the finder. Left-click takes a photo. Middle-click 
 | **Tab + Shift** | Film look |
 
 The wheel chords apply with the finder raised. In Studio, **Tab** still navigates controls. **Tab**, **Ctrl**, and **Alt** have fixed roles in the preview’s wheel controls. Use either **Shift** key for the fine-focus binding.
+
+The existing Tab chords can also trigger the leaderboard, Steam overlay, and Windows app switching. Use the bracket keys for lenses and the Studio cards for film and aspect ratio while testing this preview. Changes to binding defaults and game input consumption are awaiting review.
 
 ## Controller
 
