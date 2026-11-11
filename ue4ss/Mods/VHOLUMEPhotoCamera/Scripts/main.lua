@@ -1461,4 +1461,4 @@ else
     LoopInGameThreadWithDelay(1, tick)
 end
 
-log("Photo Camera 1.0.2 ready. Press 5, F9, or controller View to equip.")
+log("Photo Camera 1.0.2 Linux/Proton preview ready. Press 5, F9, or controller View to equip.")

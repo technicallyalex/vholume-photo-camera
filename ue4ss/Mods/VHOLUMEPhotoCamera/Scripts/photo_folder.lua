@@ -1,9 +1,11 @@
+-- Proton edition: the native Linux launcher handles desktop dialogs and folders.
 return function(scriptPath)
     local photos = {}
-    local default, selected, setting, request, prepared
+    local default, selected, setting, pending, prepared
     local sequence = 0
+    local ipc = scriptPath..'../Proton/ipc/'
     local function read(path, limit)
-        local file = io.open(path,"rb")
+        local file = io.open(path,'rb')
         if not file then return end
         local value = file:read(limit+1)
         file:close()
@@ -11,111 +13,108 @@ return function(scriptPath)
     end
     local function normalize(path)
         if not path or path:find('[%z\r\n"<>|?*]') then return end
-        path = path:gsub("\\","/")
-        if not (path:match("^[A-Za-z]:/") or path:match("^//[^/]+/[^/]+")) then return end
-        if path:sub(3):find(":") then return end
-        return path:gsub("/+$","").."/"
+        path = path:gsub('\\','/')
+        if not path:match('^[A-Za-z]:/') or path:sub(3):find(':') then return end
+        return path:gsub('/+$','')..'/'
     end
-    local alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-    local function base64(value)
-        local encoded = {}
-        for offset=1,#value,3 do
-            local a,b,c = value:byte(offset,offset+2)
-            local bits = a*65536+(b or 0)*256+(c or 0)
-            encoded[#encoded+1] = alphabet:sub(math.floor(bits/262144)%64+1,math.floor(bits/262144)%64+1)
-                ..alphabet:sub(math.floor(bits/4096)%64+1,math.floor(bits/4096)%64+1)
-                ..(b and alphabet:sub(math.floor(bits/64)%64+1,math.floor(bits/64)%64+1) or "=")
-                ..(c and alphabet:sub(bits%64+1,bits%64+1) or "=")
+    local function alive()
+        local stamp = tonumber(read(ipc..'ready',30) or '')
+        return stamp and math.abs(os.time()-stamp) <= 5
+    end
+    local function send(action)
+        if pending then return false end
+        sequence = sequence+1
+        local id = os.time()..'-'..sequence
+        local name = ipc..'request-'..id..'.txt'
+        local file = io.open(name..'.tmp','wb')
+        if not file then return false end
+        local written, closed = file:write(action..'\n'..selected),file:close()
+        if not written or not closed or not os.rename(name..'.tmp',name) then
+            os.remove(name..'.tmp')
+            return false
         end
-        return table.concat(encoded)
-    end
-    local function command(action, result)
-        local helper = (scriptPath.."Photo-Folder.ps1"):gsub("/","\\")
-        if helper:find('[%%!"\r\n]') then return end
-        return 'powershell.exe'
-            ..' -NoLogo -NoProfile -STA -WindowStyle Hidden -ExecutionPolicy Bypass -File "'..helper..'"'
-            ..' -Action '..action..' -InitialPathBase64 '..base64(selected)
-            ..(result and (' -ResultPathBase64 '..base64(result)) or "")
+        pending = {reply=ipc..'reply-'..id..'.txt',request=name,action=action,path=selected,time=os.time()}
+        return true
     end
     local function persist(path)
-        local temp, backup = setting..".tmp",setting..".bak"
-        local file = io.open(temp,"wb")
+        local temp, backup = setting..'.tmp',setting..'.bak'
+        local file = io.open(temp,'wb')
         if not file then return false end
         local written,closed = file:write(path),file:close()
         if not written or not closed then os.remove(temp); return false end
-        local previous = io.open(setting,"rb")
+        local previous = io.open(setting,'rb')
         if previous then
-            previous:close()
-            os.remove(backup)
+            previous:close();os.remove(backup)
             if not os.rename(setting,backup) then os.remove(temp); return false end
         end
         if not os.rename(temp,setting) then
             if previous then os.rename(backup,setting) end
-            os.remove(temp)
-            return false
+            os.remove(temp);return false
         end
         os.remove(backup)
-        selected = path
-        prepared = nil
+        selected,prepared = path,nil
         return true
     end
     function photos.load(saved)
         if setting then return end
-        saved = saved:gsub("[/\\]+$","")
-        default = assert(normalize(saved.."/Screenshots/Windows"))
-        setting = saved.."/VHOLUMEPhotoCamera.output-folder"
-        selected = normalize(read(setting,32768) or read(setting..".bak",32768)) or default
+        saved = saved:gsub('[/\\]+$','')
+        default = assert(normalize(saved..'/Screenshots/Windows'))
+        setting = saved..'/VHOLUMEPhotoCamera.output-folder'
+        selected = normalize(read(setting,32768) or read(setting..'.bak',32768)) or default
+        send('Prepare')
     end
-    function photos.directory() return assert(selected,"Photo folder has not loaded") end
+    function photos.directory() return assert(selected,'Photo folder has not loaded') end
     function photos.caption()
-        local path = photos.directory():gsub("/+$","")
-        local leaf = path:match("([^/]+)$") or path
+        local leaf = photos.directory():gsub('/+$',''):match('([^/]+)$') or selected
         local limit = utf8.offset(leaf,21)
-        return limit and leaf:sub(1,limit-1).."…" or leaf
+        return limit and leaf:sub(1,limit-1)..'…' or leaf
     end
     function photos.choose()
-        if request then return "FOLDER CHOOSER ALREADY OPEN" end
-        sequence = sequence+1
-        local result = setting..".choose-"..os.time().."-"..sequence
-        os.remove(result)
-        local launch = command("Choose",result)
-        if not launch then return "FOLDER CHOOSER PATH UNAVAILABLE" end
-        if not os.execute('start "" /b '..launch) then return "COULD NOT OPEN FOLDER CHOOSER" end
-        request = result
-        return "CHOOSE A PHOTO FOLDER"
+        if pending then return 'WAIT FOR THE FOLDER HELPER' end
+        if not alive() then return 'USE THE LINUX STEAM LAUNCH OPTION' end
+        return send('Choose') and 'CHOOSE A PHOTO FOLDER' or 'COULD NOT OPEN FOLDER CHOOSER'
     end
     function photos.poll()
-        if not request then return end
-        local result = read(request,32780)
-        if not result then return end
-        os.remove(request)
-        request = nil
-        if result == "CANCELLED" then return "PHOTO FOLDER UNCHANGED" end
-        local path = normalize(result:match("^OK\n(.+)$"))
-        if not path then return "COULD NOT USE PHOTO FOLDER" end
-        local probe = path..".photo-camera-write-"..os.time().."-"..sequence..".tmp"
-        local file = io.open(probe,"wb")
-        if not file then return "GAME CANNOT WRITE TO THAT PHOTO FOLDER" end
-        local written, closed = file:write(""), file:close()
-        os.remove(probe)
-        if not written or not closed then return "PHOTO FOLDER IS NOT WRITABLE" end
-        return persist(path) and "PHOTO FOLDER UPDATED" or "COULD NOT SAVE PHOTO FOLDER"
+        if not pending then return end
+        local result = read(pending.reply,32780)
+        if not result then
+            local timeout = pending.action == 'Choose' and 1800 or 90
+            if os.time()-pending.time < timeout then return end
+            os.remove(pending.request);pending=nil
+            return 'FOLDER HELPER TIMED OUT; CHECK THE LINUX LAUNCH OPTION'
+        end
+        os.remove(pending.reply)
+        local request = pending
+        pending = nil
+        if result == 'CANCELLED' then return 'PHOTO FOLDER UNCHANGED' end
+        if result == 'NO_DIALOG' then return 'INSTALL ZENITY OR KDIALOG FOR FOLDER SELECTION' end
+        if result == 'NO_OPENER' then return 'INSTALL XDG-UTILS TO OPEN THE PHOTO FOLDER' end
+        local path = normalize(result:match('^OK\n(.+)$'))
+        if not path then return 'COULD NOT USE PHOTO FOLDER; CHECK THE LINUX HELPER' end
+        if request.action == 'Choose' then
+            if not persist(path) then return 'COULD NOT SAVE PHOTO FOLDER' end
+            prepared=path
+            return 'PHOTO FOLDER UPDATED'
+        end
+        if request.path == selected then prepared=selected end
+        if request.action == 'Open' then return 'PHOTO FOLDER OPENED' end
     end
     function photos.reset()
-        if request then return "CLOSE THE FOLDER CHOOSER FIRST" end
-        return persist(default) and "DEFAULT PHOTO FOLDER RESTORED" or "COULD NOT SAVE PHOTO FOLDER"
+        if pending then return 'CLOSE THE FOLDER CHOOSER FIRST' end
+        if not persist(default) then return 'COULD NOT SAVE PHOTO FOLDER' end
+        send('Prepare')
+        return 'DEFAULT PHOTO FOLDER RESTORED'
     end
     function photos.prepare()
+        if not alive() then return false end
         if prepared == selected then return true end
-        local launch = command("Prepare")
-        if not launch or not os.execute(launch) then return false end
-        prepared = selected
-        return true
+        if not pending then send('Prepare') end
+        return false
     end
     function photos.open()
-        local launch = command("Open")
-        return launch and os.execute('start "" /b '..launch) and "PHOTO FOLDER OPENED"
-            or "COULD NOT OPEN PHOTO FOLDER"
+        if pending then return 'WAIT FOR THE FOLDER HELPER' end
+        if not alive() then return 'USE THE LINUX STEAM LAUNCH OPTION' end
+        return send('Open') and 'OPENING PHOTO FOLDER' or 'COULD NOT OPEN PHOTO FOLDER'
     end
     return photos
 end
