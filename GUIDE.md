@@ -2,6 +2,8 @@
 
 **Version 1.1.0** · Windows
 
+A complete camera controls overhaul introduces a dedicated controller layout and modifier + scrollwheel controls for focus, exposure, lenses, film looks, and framing. Shortcuts appear beside their settings in the viewfinder. See [Keyboard and mouse](#keyboard-and-mouse) and [Controller](#controller) for the layouts.
+
 ## Install and switch back
 
 Close VHOLUME. Extract the installer ZIP and run **Install Photo Camera.cmd**. It detects the Steam installation and moves any existing Photo Camera folder into a dated backup next to the UE4SS Mods folder.
