@@ -260,7 +260,7 @@ end
 local function rebuildOverlay(active, rect, controlsOnly)
     removeOverlay(active)
     active.rect = rect
-    active.ui = buildFinder(ue, active.pc, rect, active.raised, assetPath, binds, settings.reticle, active.controller)
+    active.ui = buildFinder(ue, active.pc, rect, active.raised, assetPath, binds, settings.reticle, active.controller, exposure.grid)
     if not controlsOnly then
         applyLens(active)
         applyExposure(active,true)
@@ -310,7 +310,7 @@ local function cameraPose(active)
     return position, { Pitch = rotation.Pitch, Yaw = rotation.Yaw, Roll = 0 }
 end
 
-optics = dofile(scriptPath .. "optics.lua")(ue, system, cameraPose, updateFocusLabels, binds)
+optics = dofile(scriptPath .. "optics.lua")(ue, system, cameraPose, updateFocusLabels, binds, exposure)
 subjects = dofile(scriptPath .. "subjects.lua")(ue, system, cameraPose, log)
 meter = dofile(scriptPath .. "meter.lua")(ue, cameraPose, log, exposure.sceneCalibrationEV)
 motion = dofile(scriptPath .. "motion.lua")(ue, cameraPose)
@@ -915,7 +915,7 @@ local function studioExposure(active, target, pressed)
         exposure.mode = target.step
     elseif item == "auto" and target then
         exposure.auto = not exposure.auto
-    elseif item == "minISO" or item == "maxISO" or item == "minShutter" then
+    elseif item == "minISO" or item == "maxISO" or item == "minShutter" or item == "dofBoost" then
         if not exposure.step(item,step) then return end
     else
         return
@@ -1000,6 +1000,7 @@ local function studioTick(active, now, tab)
         refreshStudio(active)
     end
     local target = active.studio.pointer(not active.controller and mouse.X,not active.controller and mouse.Y,pressed.click)
+    if active.controller and (pad.pressed.lb or pad.pressed.rb) then tab = pad.pressed.lb end
     if tab ~= nil then
         active.studio.tab(tab)
         local focused = active.studio.focused()
@@ -1092,6 +1093,13 @@ local function studioTick(active, now, tab)
         settings.reticle = (settings.reticle - 1 + target.step) % #reticles + 1
         active.studioCard = frameCard
         refreshStudio(active)
+        return
+    end
+    if target and target.action == "grid" then
+        exposure.grid = not exposure.grid
+        active.studioCard = frameCard
+        refreshStudio(active)
+        if not binds.persist() then active.studio.notice("Could not save grid setting.") end
         return
     end
     local nextCard = target and target.card
@@ -1441,4 +1449,4 @@ else
     LoopInGameThreadWithDelay(1, tick)
 end
 
-log("Optical Finder Preview 1.1.0-alpha.5 ready. Press 5, F9, or controller View to equip.")
+log("Optical Finder Preview 1.1.0-alpha.6 ready. Press 5, F9, or controller View to equip.")

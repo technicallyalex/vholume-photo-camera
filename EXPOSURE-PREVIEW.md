@@ -1,6 +1,6 @@
 # VHOLUME Photo Camera Optical Finder Preview
 
-**Version 1.1.0-alpha.5** · Windows · Separate preview build
+**Version 1.1.0-alpha.6** · Windows · Separate preview build
 
 ## Install and switch back
 
@@ -12,9 +12,13 @@ To switch back, close the game, move the current **VHOLUMEPhotoCamera** folder o
 
 ## Optical finder
 
-The raised finder shows a larger, centered capture area. At 1920 × 1080, the 3:2 frame is 1428 × 952 pixels. A horizontal exposure meter sits above the image. The bottom LCD shows mode, shutter, aperture, ISO, and lens, with segmented camera numerals. Focus lamps and focus controls sit beside the LCD or below it on narrower screens. Aspect and film readouts move below the image when the side margins are narrow.
+The raised finder shows a larger, centered capture area. At 1920 × 1080, the 3:2 frame is 1428 × 952 pixels. A slim exposure meter above the image has a smoothly moving marker. The bottom LCD shows mode, shutter, aperture, ISO, and lens, with segmented camera numerals. Larger focus lamps sit just below the center reticle. Focus controls sit beside the LCD or below it on narrower screens. Aspect and film readouts move below the image when the side margins are narrow.
 
 Shortcuts appear directly in the labels for their settings and switch with the active input device. Keyboard labels reflect customized bindings. Hold a wheel modifier or controller shoulder button to highlight the settings it adjusts. Photo Studio’s Frame card offers the new Optical reticle alongside Square, Circle, and None.
+
+Toggle the rule-of-thirds guide using **Frame → Thirds Grid** in Photo Studio. In Studio, **LB / RB** move controller focus between buttons and **A** activates the focused button.
+
+Under **Exposure → Edit Exposure**, select **Depth of field strength** for natural **1x**, stronger **2x**, or exaggerated **4x** lens blur. The selected aperture still determines exposure. The strength option changes the rendering aperture used for blur. Grid and DOF strength choices save with the preview settings.
 
 ## Screenshot folder
 
@@ -33,7 +37,7 @@ Press **5** or **controller View** to equip the camera and open Photo Studio. Se
 | **A** | Aperture and ISO if Auto ISO is off | Shutter speed and optional Auto ISO |
 | **S** | Shutter speed and ISO if Auto ISO is off | Aperture and optional Auto ISO |
 
-Game mode is the default. In M, A, and S, a wider aperture, slower shutter, or higher ISO brightens the image. Available settings cover f/1.0 to f/16, 8 seconds to 1/4000 second, and ISO 100 to 6400 in roughly one-third-stop steps. [Unreal Engine exposure documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/auto-exposure-in-unreal-engine)
+Game mode is the default. In M, A, and S, a wider aperture, slower shutter, or higher ISO brightens the image. Available settings cover f/1.0 to f/16, 8 seconds to 1/32000 second, and ISO 100 to 6400 in roughly one-third-stop steps. [Unreal Engine exposure documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/auto-exposure-in-unreal-engine)
 
 Enable **Auto ISO** to set minimum and maximum sensitivity. Aperture Priority prefers the configured minimum shutter speed and can slow down after reaching the ISO ceiling. The viewfinder marks camera-set values **AUTO** and shows exposure error in EV. Film looks set color and tone. The actual ISO determines grain strength and size, including with the Neutral look.
 

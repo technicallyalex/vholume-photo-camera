@@ -1,4 +1,4 @@
-return function(ue, system, pose, refresh, binds)
+return function(ue, system, pose, refresh, binds, exposure)
     local optics = { enabled = true, manual = false, distance = 400 }
     local maxDistance = 100000 -- One kilometer is treated as infinity.
     local minDistance = 35
@@ -121,9 +121,10 @@ return function(ue, system, pose, refresh, binds)
         if optics.enabled then
             setQuality(active)
             pp.bOverride_DepthOfFieldFstop = true
-            pp.DepthOfFieldFstop = active.exposure.aperture
+            local strength = exposure.dofStrengths[exposure.dofBoost]
+            pp.DepthOfFieldFstop = active.exposure.aperture/strength
             pp.bOverride_DepthOfFieldMinFstop = true
-            pp.DepthOfFieldMinFstop = 1
+            pp.DepthOfFieldMinFstop = 1/strength
             pp.bOverride_DepthOfFieldBladeCount = true
             pp.DepthOfFieldBladeCount = 9
             pp.bOverride_DepthOfFieldSensorWidth = true

@@ -8,7 +8,7 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
     local columns = wide and #cards or 3
     local rows = math.ceil(#cards / columns)
     local unit = math.min(w / (wide and 1180 or 620), h / (wide and 460 or 665))
-    local tileW, tileH, gap = 178*unit, 220*unit, 9*unit
+    local tileW, tileH, gap = 178*unit, 249*unit, 9*unit
     local panelW = columns*tileW + (columns-1)*gap + 26*unit
     local panelH = rows*tileH + (rows-1)*gap + 136*unit
     local x, y = (w-panelW)/2, (h-panelH)/2
@@ -224,7 +224,7 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
     end
 
     if exposurePage then
-        local pw, ph = (wide and 960 or 580)*unit, (wide and 340 or 490)*unit
+        local pw, ph = (wide and 960 or 580)*unit, (wide and 374 or 524)*unit
         local left, top = (w-pw)/2, (h-ph)/2
         local innerX, innerW = left+13*unit, pw-26*unit
         block(left,top,pw,ph,color(.025,.038,.032,.98))
@@ -235,7 +235,7 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
         local column = wide and (innerW-16*unit)/2 or innerW
         local isoX = wide and innerX+column+16*unit or innerX
         label(innerX,modesY,column,18*unit,10,"EXPOSURE MODE",gold)
-        label(isoX,isoY,column,18*unit,10,"SENSITIVITY",gold)
+        label(isoX,isoY,column,18*unit,10,"SENSITIVITY / OPTICS",gold)
         local rows, markers, values = {}, {}, {}
         local descriptions = {"Game controls brightness", "You set aperture and shutter",
             "You set aperture", "You set shutter speed"}
@@ -249,7 +249,8 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
             rows[#rows+1] = target
         end
         local names = {{"auto","Auto ISO"}, {"minISO","Minimum ISO"},
-            {"maxISO","Maximum ISO"}, {"minShutter","Minimum shutter in A"}}
+            {"maxISO","Maximum ISO"}, {"minShutter","Minimum shutter in A"},
+            {"dofBoost","Depth of field strength"}}
         for i, row in ipairs(names) do
             local id, title = row[1], row[2]
             local py = isoY+(21+(i-1)*34)*unit
@@ -267,7 +268,7 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
                 rows[#rows+1] = target
             end
         end
-        local infoY = isoY+161*unit
+        local infoY = isoY+195*unit
         local info = label(isoX,infoY,column,18*unit,9,"",quiet)
         local currentConfig
         updateContext = function()
@@ -291,6 +292,7 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
             values.minISO:SetText(FText(tostring(config.isos[config.minISO])))
             values.maxISO:SetText(FText(tostring(config.isos[config.maxISO])))
             values.minShutter:SetText(FText(config.speedText(config.speeds[config.minShutter])))
+            values.dofBoost:SetText(FText(config.dofStrengths[config.dofBoost].."x"))
             updateContext()
             hint:SetText(FText(controller and "D-PAD   Navigate / adjust       A   Select       B   Back"
                 or "ARROWS   Navigate / adjust       ENTER   Select       TAB   Next control"))
@@ -329,6 +331,7 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
     },keyboardHints,true,.86)
     ui.addControlRow(0,0,innerW,{
         {"padCards",0,"Card","←","→"}, {"padValues",0,"Change","↑","↓"},
+        {"padControls",0,"Control","LB","RB"},
         {"padSelect",0,"Select","A"}, {"padBack",0,"Back","B"}, {"padFinder",0,"Finder","LT"},
     },controllerHints,true,.86)
 
@@ -382,6 +385,7 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
                 glyph("reticle",innerX+3*unit,py+181*unit,11*unit)
                 label(innerX+20*unit,py+181*unit,innerW-20*unit,13*unit,8,"RETICLE",quiet)
                 tile.reticle = stepper(innerX,py+194*unit,innerW,9.5,"reticle",i)
+                tile.grid = button(innerX,py+223*unit,innerW,21*unit,"","grid",i,nil,nil,"frame")
             elseif card == "subjects" then
                 button(innerX,py+156*unit,innerW,21*unit,"PLACE SUBJECT","select",i,nil,nil,"subject")
                 ui.addControlRow(px+tileW/2,py+185*unit,innerW,{
@@ -431,6 +435,7 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
         rotate:SetText(FText(square and "SQUARE FRAME" or (portrait and "SET LANDSCAPE" or "SET PORTRAIT")))
         rotate:SetColorAndOpacity({SpecifiedColor=square and quiet or ink,ColorUseRule=0})
         tiles.frame.reticle:SetText(FText(reticle))
+        tiles.frame.grid:SetText(FText(config.grid and "THIRDS GRID ON" or "THIRDS GRID OFF"))
         tiles.lens.scaling:SetText(FText(content.lens[4] and "AIM SCALING ON" or "AIM SCALING OFF"))
     end
     function ui.tick(now)

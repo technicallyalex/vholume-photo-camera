@@ -4,10 +4,12 @@ local exposure = {
     apertures = {1,1.1,1.2,1.4,1.6,1.8,2,2.2,2.5,2.8,3.2,3.5,4,4.5,5,5.6,6.3,7.1,8,9,10,11,13,14,16},
     speeds = {1/8,1/6,1/5,1/4,1/3.2,1/2.5,1/2,1/1.6,1/1.25,
         1,1.25,1.6,2,2.5,3.2,4,5,6,8,10,13,15,20,25,30,40,50,60,80,100,125,
-        160,200,250,320,400,500,640,800,1000,1250,1600,2000,2500,3200,4000},
+        160,200,250,320,400,500,640,800,1000,1250,1600,2000,2500,3200,4000,
+        5000,6400,8000,10000,12800,16000,20000,25600,32000},
     isos = {100,125,160,200,250,320,400,500,640,800,1000,1250,1600,2000,2500,3200,4000,5000,6400},
     mode = 1, aperture = 7, shutter = 22 + extendedShutterSteps, iso = 1,
     auto = false, minISO = 1, maxISO = 13, minShutter = 19 + extendedShutterSteps,
+    grid = false, dofBoost = 1, dofStrengths = {1,2,4},
     -- VHOLUME's baked lighting uses game-relative HDR values. Map those
     -- values to camera EV without changing the size of an exposure stop.
     sceneCalibrationEV = 10,
@@ -80,7 +82,9 @@ function exposure.speedText(speed)
 end
 
 function exposure.help(config, action, mode)
-    if action == "auto" then
+    if action == "dofBoost" then
+        return "Strengthens lens blur at the selected aperture."
+    elseif action == "auto" then
         return config.mode == 1 and "Auto ISO is inactive in Game mode."
             or "Adjusts ISO within your selected limits."
     elseif action == "minISO" then return "Lowest sensitivity allowed for Auto ISO."
@@ -113,6 +117,10 @@ function exposure.step(which, direction)
         exposure.mode = (exposure.mode - 1 + direction) % #exposure.modes + 1
         return true
     end
+    if which == "dofBoost" then
+        exposure.dofBoost = (exposure.dofBoost-1+direction)%#exposure.dofStrengths+1
+        return true
+    end
     local bound = limits[which]
     local old = exposure[which]
     exposure[which] = clamp(old + direction, bound[1], bound[2])
@@ -130,12 +138,15 @@ function exposure.loadOptions(body)
     exposure.minShutter = option("minShutterExtended",
         option("minShutter", 19, #speeds - extendedShutterSteps) + extendedShutterSteps, #speeds)
     exposure.auto = body:match("[\r\n]autoISO=1[\r\n]") ~= nil
+    exposure.grid = body:match("[\r\n]thirdsGrid=1[\r\n]") ~= nil
+    exposure.dofBoost = option("dofBoost",1,#exposure.dofStrengths)
 end
 
 function exposure.optionLines()
     return {"autoISO=" .. (exposure.auto and "1" or "0"), "minISO=" .. exposure.minISO,
         "maxISO=" .. exposure.maxISO, "minShutterExtended=" .. exposure.minShutter,
-        "minShutter=" .. math.max(1,exposure.minShutter - extendedShutterSteps)}
+        "minShutter=" .. math.max(1,exposure.minShutter - extendedShutterSteps),
+        "thirdsGrid=" .. (exposure.grid and "1" or "0"), "dofBoost=" .. exposure.dofBoost}
 end
 
 local stockFields = {"AutoExposureMethod", "AutoExposureApplyPhysicalCameraExposure", "AutoExposureBias",

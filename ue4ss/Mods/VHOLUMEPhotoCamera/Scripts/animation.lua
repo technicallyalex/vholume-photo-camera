@@ -52,6 +52,7 @@ return function(ue, ui, canvas, unit, dpi, art)
 
     function ui.tickEffects(now)
         ui.tickControls(now)
+        if ui.tickMeter then ui.tickMeter(now) end
         if ui.tickCameraArt then ui.tickCameraArt(now) end
         if transition then
             local t = math.min(1, math.max(0, (now - transition[1]) / transition[2]))

@@ -36,7 +36,6 @@ return function(ue, ui, rect, binds, controller, draw)
 
     local headerWidth = math.min(w-16*u,math.max(fw,510*u))
     local headerX, headerY = (w-headerWidth)/2, y-31*u
-    local leftWidth = headerWidth/2-58*u
     local fields, last, digits, autoTags = {}, {}, {}, {}
     local function set(id, value)
         if last[id] == value then return end
@@ -82,11 +81,14 @@ return function(ue, ui, rect, binds, controller, draw)
     local focusY = bottom+(rect.bottomFocus and 31 or 2)*u
     local afWidth = focusWidth*.43
     shortcut("af","SINGLE-SHOT AF",controller and "A" or token("af"),focusX,focusY,afWidth,ink,gold)
+    local indicatorX = x+fw/2-29*u
+    local indicatorY = y+fh/2+math.min(fw,fh)*.13
+    draw.picture("Controls/finder-meter",indicatorX-3*u,indicatorY-2*u,64*u,22*u,.8)
     local indicators = {}
     for i, name in ipairs({"near","aligned","far"}) do
-        indicators[i] = draw.picture("Studio/focus-"..name,focusX+afWidth+(i-1)*10*u,focusY,9*u,9*u,.20)
+        indicators[i] = draw.picture("Studio/focus-"..name,indicatorX+(i-1)*20*u,indicatorY,18*u,18*u,.16)
     end
-    local modeX = focusX+afWidth+33*u
+    local modeX = focusX+afWidth+4*u
     shortcut("mode","AF/MF",controller and "X" or token("mode"),modeX,focusY,focusX+focusWidth-modeX,ink,activeInk,2)
     local focusKeys = binds.focusTokens()
     for i, key in ipairs(focusKeys) do focusKeys[i] = mouseNames[key] or key end
@@ -102,28 +104,44 @@ return function(ue, ui, rect, binds, controller, draw)
         if lastIndicator == direction then return end
         lastIndicator = direction
         for i, indicator in ipairs(indicators) do
-            ue.call("/Script/UMG.Widget:SetRenderOpacity",indicator,i == direction and 1 or .20)
+            ue.call("/Script/UMG.Widget:SetRenderOpacity",indicator,i == direction and 1 or .16)
         end
     end
 
 
-    local track = math.min(236*u,headerWidth*.44)
-    local trackX, trackY = w/2-track/2,headerY+15*u
-    label(trackX,headerY,track,7,ink,"EXPOSURE",1)
-    block(trackX,trackY,track,.6*u,dim)
+    local meterW = math.min(322*u,headerWidth*.63)
+    local meterX, meterY = w/2-meterW/2,headerY+2*u
+    draw.picture("Controls/finder-meter",meterX,meterY,meterW,26*u,1)
+    label(meterX+7*u,meterY+7*u,16*u,6,dim,"EV")
+    local track = meterW-100*u
+    local trackX, trackY = meterX+28*u,meterY+12*u
+    local centerX = trackX+track/2
+    block(trackX,trackY,track,.7*u,rgb(.13,.18,.145))
     for i=0,12 do
         local whole = i%3 == 0
-        block(trackX+track*i/12,trackY-(whole and 2 or 1)*u,.6*u,(whole and 5 or 3)*u,dim)
-        if whole then
+        block(trackX+track*i/12,trackY-(whole and 2.5 or 1)*u,.6*u,(whole and 5 or 2)*u,dim)
+        if i == 0 or i == 6 or i == 12 then
             local ev = i/3-2
-            label(trackX+track*i/12-10*u,trackY+5*u,20*u,6,dim,
+            label(trackX+track*i/12-9*u,trackY+4*u,18*u,5,dim,
                 ev == 0 and "0" or string.format("%+d",ev),1)
         end
     end
-    local needle = block(w/2-u,trackY-2*u,2*u,5*u,gold)
-    fields.meter = label(headerX,headerY+17*u,leftWidth,8,gold)
-    fields.warning = label(headerX+headerWidth-leftWidth,headerY+17*u,leftWidth,7,gold,nil,2)
-    local lastEV
+    block(centerX-.5*u,trackY-4*u,u,8*u,ink)
+    local fill = block(centerX,trackY-.8*u,.5*u,2.2*u,gold)
+    local needle = block(centerX-u,trackY-3*u,2*u,6*u,gold)
+    fields.meter = label(trackX+track+8*u,meterY+7*u,58*u,8,gold,nil,2)
+    fields.warning = label(w/2+meterW/2+6*u,headerY+17*u,
+        (headerWidth-meterW)/2-8*u,7,gold,nil,2)
+    local lastEV, meterGoal, meterOffset, meterAt = nil,nil,0,nil
+    function ui.tickMeter(now)
+        local elapsed = meterAt and math.max(0,now-meterAt) or 0
+        meterAt = now
+        if not meterGoal or math.abs(meterGoal-meterOffset) < .01 then return end
+        meterOffset = meterOffset+(meterGoal-meterOffset)*(1-math.exp(-elapsed/.07))
+        ue.call("/Script/UMG.Widget:SetRenderTranslation",needle,{X=meterOffset/dpi,Y=0})
+        ue.call("/Script/UMG.Widget:SetRenderTranslation",fill,{X=math.min(0,meterOffset)/dpi,Y=0})
+        ue.call("/Script/UMG.CanvasPanelSlot:SetSize",fill.Slot,{X=math.max(.5*u,math.abs(meterOffset))/dpi,Y=2.2*u/dpi})
+    end
     function ui.setExposure(mode, values, speed)
         set("exposureMode",mode)
         set("aperture",string.format("f/%.1f",values.aperture))
@@ -142,13 +160,18 @@ return function(ue, ui, rect, binds, controller, draw)
         if lastEV ~= ev then
             lastEV = ev
             ue.call("/Script/UMG.Widget:SetVisibility",needle,ev and 3 or 2)
+            ue.call("/Script/UMG.Widget:SetVisibility",fill,ev and 3 or 2)
+            meterGoal = ev and math.max(-2,math.min(2,ev))*track/4 or nil
             if ev then
-                local offset = math.max(-2,math.min(2,ev))*track/(4*dpi)
-                ue.call("/Script/UMG.Widget:SetRenderTranslation",needle,{X=offset,Y=0})
+                local color = math.abs(ev)<.17 and activeInk or gold
+                needle:SetBrushColor(color)
+                fill:SetBrushColor(color)
+                fields.meter:SetColorAndOpacity({SpecifiedColor=color,ColorUseRule=0})
             end
         end
     end
     ue.call("/Script/UMG.Widget:SetVisibility",needle,2)
+    ue.call("/Script/UMG.Widget:SetVisibility",fill,2)
 
     local filmKey, ratioKey = dial("film","RB+X"),dial("ratio","↓")
     local actions = {

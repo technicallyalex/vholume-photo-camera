@@ -14,6 +14,11 @@ def build(output):
     painter.rectangle((0, 0, 2047, 127), outline=(54, 66, 51, 255), width=5)
     painter.line((7, 7, 2040, 7), fill=(205, 212, 180, 255), width=2)
     plate.save(output / "finder-lcd.png", optimize=True)
+    meter = Image.new("RGBA",(1280,108))
+    painter = ImageDraw.Draw(meter)
+    painter.rounded_rectangle((2,2,1277,105),radius=26,fill=(14,22,18,247),outline=(62,77,66,235),width=2)
+    painter.line((28,5,1251,5),fill=(83,96,80,165),width=2)
+    meter.save(output / "finder-meter.png",optimize=True)
 
     cell_w, cell_h, scale = 36, 56, 4
     atlas = Image.new("RGBA", (16*cell_w*scale, cell_h*scale))

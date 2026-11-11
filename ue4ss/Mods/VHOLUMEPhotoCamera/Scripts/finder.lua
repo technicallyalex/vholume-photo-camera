@@ -3,7 +3,7 @@ local buildControls = dofile(directory .. "controls.lua")
 local buildAnimation = dofile(directory .. "animation.lua")
 local buildHUD = dofile(directory .. "finder_hud.lua")
 
-return function(ue, pc, rect, raised, assetPath, binds, reticle, controller)
+return function(ue, pc, rect, raised, assetPath, binds, reticle, controller, grid)
     local ui = { raised = raised }
     local dpi, w, h = rect.dpi, rect.width, rect.height
     local unit = rect.unit
@@ -92,6 +92,17 @@ return function(ue, pc, rect, raised, assetPath, binds, reticle, controller)
         block(x - lip, y - lip, fw + lip * 2, unit, seam)
         block(x - lip, y + fh + lip - unit, fw + lip * 2, unit, seam)
 
+        local thirds = add("CanvasPanel",x,y,fw,fh)
+        local guide = rgb(.78,.83,.76,.28)
+        local shadow = rgb(.002,.004,.003,.35)
+        local stroke = math.max(1,.6*unit)
+        for i=1,2 do
+            block(fw*i/3+stroke,0,stroke,fh,shadow,thirds)
+            block(fw*i/3,0,stroke,fh,guide,thirds)
+            block(0,fh*i/3+stroke,fw,stroke,shadow,thirds)
+            block(0,fh*i/3,fw,stroke,guide,thirds)
+        end
+        ue.call("/Script/UMG.Widget:SetVisibility",thirds,grid and 3 or 2)
         buildHUD(ue, ui, rect, binds, controller, draw)
 
         if reticle ~= 4 then
