@@ -1,6 +1,6 @@
-# VHOLUME Photo Camera — Linux / Proton preview
+# VHOLUME Photo Camera - Linux / Proton preview
 
-**1.0.2-linux.2** · Based on the v1.0.2 controls overhaul
+**1.0.2-linux.2** / Based on the v1.0.2 controls overhaul
 
 This package runs the Windows Steam edition of VHOLUME through Proton. It includes the camera mod, the same UE4SS loader bundled with the Windows release, a Linux installer, and a native screenshot-folder helper. Python **3.9 or newer** is required. No root access or PowerShell installation is needed.
 
@@ -15,13 +15,13 @@ This package runs the Windows Steam edition of VHOLUME through Proton. It includ
    python3 install-linux.py
    ```
 
-   Steam's regular installation, additional Steam libraries, and the usual Flatpak Steam location are detected automatically. If no unique installation is found, use the directory shown by **Steam → VHOLUME → Manage → Browse local files**:
+   Steam's regular installation, additional Steam libraries, and the usual Flatpak Steam location are detected automatically. If no unique installation is found, use the directory shown by **Steam > VHOLUME > Manage > Browse local files**:
 
    ```sh
    python3 install-linux.py --game-path "/path/to/steamapps/common/VHOLUME"
    ```
 
-3. Copy the **complete launch option printed by the installer** into **Steam → VHOLUME → Properties → General → Launch Options**. It looks like:
+3. Copy the **complete launch option printed by the installer** into **Steam > VHOLUME > Properties > General > Launch Options**. It looks like:
 
    ```text
    python3 '/path/to/VHOLUME/VHOLUME/Binaries/Win64/ue4ss/Mods/VHOLUMEPhotoCamera/Proton/bridge.py' %command%
@@ -41,21 +41,21 @@ The default photo location is inside VHOLUME's Proton prefix:
 <Steam library>/steamapps/compatdata/4131730/pfx/drive_c/users/steamuser/AppData/Local/VHOLUME/Saved/Screenshots/Windows
 ```
 
-**Studio → Photos → Choose Folder** uses **Zenity** or **KDialog** to select a Linux folder. Install either using your distribution's package manager if neither is available. If both are missing, default-folder captures still work and the menu gives a clear message. **Open Folder** uses `xdg-open` or `gio`. Selected folders are converted through the current Proton prefix's drive mappings, including the usual Z: mapping to the Linux filesystem.
+**Studio > Photos > Choose Folder** uses **Zenity** or **KDialog** to select a Linux folder. Install either using your distribution's package manager if neither is available. If both are missing, default-folder captures still work and the menu gives a clear message. **Open Folder** uses `xdg-open` or `gio`. Selected folders are converted through the current Proton prefix's drive mappings, including the usual Z: mapping to the Linux filesystem.
 
 With Flatpak Steam, the game, selected photo directory, desktop tools, and Python must be accessible within Steam's sandbox. The installer does not change Flatpak permissions. Standard desktop Steam is the simplest first test environment.
 
 ## Camera controls
 
-The dedicated controller layout and modifier + scrollwheel controls from v1.0.2 are retained. Scroll to focus, **Shift + wheel** for fine focus, **Ctrl + wheel** for aperture, **Alt + wheel** for shutter, and **Ctrl + Alt + wheel** for ISO. Hold **R / T / Y / U** with the wheel for lenses / film / aspect / exposure mode. Letter modifiers are editable in **Studio → Keybinds → Wheel**. Ctrl still reaches the game's slide action.
+The dedicated controller layout and controls using modifier keys and the scroll wheel from v1.0.2 are retained. Scroll to focus, **Shift + wheel** for fine focus, **Ctrl + wheel** for aperture, **Alt + wheel** for shutter, and **Ctrl + Alt + wheel** for ISO. Hold **R / T / Y / U** with the wheel for lenses / film / aspect / exposure mode. Letter modifiers are editable in **Studio > Keybinds > Wheel**. Ctrl still reaches the game's slide action.
 
-**LT / RT** raise the finder / shoot. **A / X / B / Y** activate single-shot autofocus / AF-MF / DOF / Studio. D-pad and shoulder combinations adjust the camera. See the [full v1.0.2 controls guide](https://github.com/technicallyalex/vholume-photo-camera/blob/v1.0.2/GUIDE.md) for the complete layout.
+**LT / RT** raise the finder / shoot. **A / X / B / Y** activate single-shot autofocus / AF-MF / DOF / Studio. D-pad and shoulder combinations adjust the camera. See the [full v1.0.2 controls guide](https://github.com/technicallyalex/vholume-photo-camera/blob/main/GUIDE.md) for the complete layout.
 
-Exposure modes, Auto ISO, motion captures, 1x–8x lens blur, film looks, subject placement, and all seven aspect ratios use the released camera implementation. Camera cues retain the release's synthesized audio; Proton's media playback still needs an in-game check.
+Exposure modes, Auto ISO, motion captures, 1x to 8x lens blur, film looks, subject placement, and all seven aspect ratios use the released camera implementation. Camera cues retain the release's synthesized audio; Proton's media playback still needs an in-game check.
 
 ## Backups and switching back
 
-Installing over an existing mod moves the entire old mod into a dated **PhotoCamera-backup-…** directory next to `ue4ss/Mods`. Existing UE4SS files and user settings are preserved. To restore, close the game, move the current `VHOLUMEPhotoCamera` folder outside `Mods`, then move the chosen backup into `Mods` and name it `VHOLUMEPhotoCamera`. Remove the Linux launch wrapper if switching back to a package that does not use it.
+Installing over an existing mod moves the entire old mod into a dated **PhotoCamera-backup-...** directory next to `ue4ss/Mods`. Existing UE4SS files and user settings are preserved. To restore, close the game, move the current `VHOLUMEPhotoCamera` folder outside `Mods`, then move the chosen backup into `Mods` and name it `VHOLUMEPhotoCamera`. Remove the Linux launch wrapper if switching back to a package that does not use it.
 
 The installed launch option is also saved in `ue4ss/PhotoCamera-Linux-Launch-Options.txt`. The Windows release retains its original contents and has separate installer and manual downloads on the same release page.
 
