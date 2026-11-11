@@ -20,7 +20,7 @@ APP_ID = '4131730'
 MOD_NAME = 'VHOLUMEPhotoCamera'
 MOD_ARCHIVE = 'VHOLUME-Photo-Camera-Linux-Mod.zip'
 LOADER_ARCHIVE = 'UE4SS_v3.0.1-1011-gb50986bd.zip'
-MOD_SHA256 = '0c73e7efb7f4d0eab8a7942c253e229b7dfd566a1dbdcc4fe6af99ac2ab9a869'
+MOD_SHA256 = '9b805f9f4bfef684be39aa37784021fd88f3db5547523a9fa9ac8b5e395fe7ae'
 LOADER_SHA256 = 'aa181789dc7226bcec94f13f054ff10477d7383321ffb98dbc3666a159b182a8'
 LOADER_DLL_SHA256 = '2ad348bf2025bd26b2aa63b478d9813afbd4e656c9bcfb3fdf6752c4d285f298'
 
@@ -153,7 +153,7 @@ def install(package, bin_path, prefix=None, dry_run=False, running_check=game_ru
         proton = pending / 'Proton'
         (proton / 'ipc').mkdir(mode=0o700)
         (proton / 'install.json').write_text(json.dumps({'prefix': str(prefix) if prefix else None,
-            'app_id': APP_ID, 'version': '1.0.2-linux.1'}, indent=2) + '\n', encoding='utf-8')
+            'app_id': APP_ID, 'version': '1.0.2-linux.2'}, indent=2) + '\n', encoding='utf-8')
         (proton / 'launch.sh').chmod(0o755)
         if running_check():
             raise RuntimeError('VHOLUME started during installation; close it and retry')

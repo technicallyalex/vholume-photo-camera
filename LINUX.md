@@ -1,6 +1,6 @@
 # VHOLUME Photo Camera — Linux / Proton preview
 
-**1.0.2-linux.1** · Based on the v1.0.2 controls overhaul
+**1.0.2-linux.2** · Based on the v1.0.2 controls overhaul
 
 This package runs the Windows Steam edition of VHOLUME through Proton. It includes the camera mod, the same UE4SS loader bundled with the Windows release, a Linux installer, and a native screenshot-folder helper. Python **3.9 or newer** is required. No root access or PowerShell installation is needed.
 

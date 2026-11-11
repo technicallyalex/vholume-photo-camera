@@ -34,15 +34,25 @@ def main():
     root = Path(__file__).resolve().parents[2]
     mod = root / 'ue4ss/Mods/VHOLUMEPhotoCamera'
     files = sorted(p for p in mod.rglob('*') if p.is_file() and '__pycache__' not in p.parts)
-    assert len(files) == 103, len(files)
-    assert not (mod / 'Scripts/Photo-Folder.ps1').exists()
-    assert all(p.suffix in ('.lua', '.png', '.mp4', '.txt', '.py', '.sh') and not p.is_symlink() for p in files)
+    assert len(files) == 102, len(files)
+    assert all(p.suffix in ('.lua', '.png', '.mp4', '.txt', '.ps1') and not p.is_symlink() for p in files)
     args.output.mkdir(parents=True, exist_ok=True)
     work = root / '.work/linux-package'
     work.mkdir(parents=True, exist_ok=True)
     payload_name = 'VHOLUME-Photo-Camera-Linux-Mod.zip'
     payload = work / payload_name
-    archive(payload, {p.relative_to(root).as_posix(): p.read_bytes() for p in files})
+    entries = {p.relative_to(root).as_posix(): p.read_bytes() for p in files}
+    prefix = 'ue4ss/Mods/VHOLUMEPhotoCamera/'
+    del entries[prefix + 'Scripts/Photo-Folder.ps1']
+    overlay = root / 'platforms/linux'
+    for path in sorted(overlay.rglob('*')):
+        if path.is_file() and '__pycache__' not in path.parts:
+            entries[prefix + path.relative_to(overlay).as_posix()] = path.read_bytes()
+    main_path = prefix + 'Scripts/main.lua'
+    assert b'Photo Camera 1.0.2 ready' in entries[main_path]
+    entries[main_path] = entries[main_path].replace(b'Photo Camera 1.0.2 ready', b'Photo Camera 1.0.2 Linux/Proton preview ready')
+    assert len(entries) == 103, len(entries)
+    archive(payload, entries)
     source = root / 'installer/linux/install-linux.py'
     body = source.read_text(encoding='utf-8')
     body, count = re.subn(r"(?m)^MOD_SHA256 = '[^']+'", "MOD_SHA256 = '" + digest(payload.read_bytes()) + "'", body)
@@ -63,7 +73,7 @@ def main():
         built.extractall(work)
     (args.output / 'SHA256SUMS.txt').write_text(digest(output.read_bytes()) + '  ' + output.name + '\n', encoding='utf-8')
     (args.output / 'README.md').write_bytes(entries['README.md'])
-    print(f'Built and verified Linux/Proton preview: {len(files)} mod files; {output.stat().st_size} bytes.')
+    print(f'Built and verified Linux/Proton preview: 103 mod files; {output.stat().st_size} bytes.')
 
 
 if __name__ == '__main__':

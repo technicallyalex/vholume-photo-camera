@@ -2,6 +2,7 @@
 
 import contextlib
 import ctypes
+import ctypes.util
 import hashlib
 import importlib.util
 import io
@@ -9,6 +10,9 @@ import json
 import os
 import sys
 import tempfile
+import subprocess
+import threading
+import time
 import types
 import unittest
 import zipfile
@@ -18,6 +22,7 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[3]
 MOD = ROOT / 'ue4ss/Mods/VHOLUMEPhotoCamera'
+OVERLAY = ROOT / 'platforms/linux'
 PACKAGE = ROOT / '.work/linux-package'
 WORK = ROOT / '.work'
 WORK.mkdir(exist_ok=True)
@@ -31,7 +36,7 @@ def module(name, file):
 
 
 installer = module('linux_installer', ROOT / 'installer/linux/install-linux.py')
-bridge = module('linux_bridge', MOD / 'Proton/bridge.py')
+bridge = module('linux_bridge', OVERLAY / 'Proton/bridge.py')
 
 
 def hashes(root):
@@ -61,6 +66,49 @@ class Fixtures(unittest.TestCase):
 
 
 class InstallerTests(Fixtures):
+    def test_windows_runtime_stays_identical_to_released_package(self):
+        candidates = [ROOT / '.work/deps/VHOLUME-Photo-Camera-Installer.zip',
+                      ROOT.parent / 'Builds/v1.0.2/VHOLUME-Photo-Camera-Installer.zip']
+        bundle = next(p for p in candidates if p.is_file())
+        with zipfile.ZipFile(bundle) as outer:
+            with zipfile.ZipFile(io.BytesIO(outer.read('VHOLUME-Photo-Camera.zip'))) as archive:
+                files = [p for p in MOD.rglob('*') if p.is_file() and '__pycache__' not in p.parts]
+                self.assertEqual(len(files), 102)
+                for path in files:
+                    self.assertEqual(path.read_bytes(), archive.read(path.relative_to(ROOT).as_posix()), str(path))
+
+    @unittest.skipUnless(sys.platform == 'linux', 'Uses real Linux /proc and advisory locks')
+    def test_linux_cli_install_and_lock(self):
+        bin_path = self.game()
+        command = [sys.executable, str(PACKAGE / 'install-linux.py'), '--game-path', str(bin_path)]
+        result = subprocess.run(command, capture_output=True, text=True, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        import fcntl
+        with (bin_path / '.PhotoCamera-installer.lock').open('w') as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            result = subprocess.run(command, capture_output=True, text=True, timeout=30)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(list(bin_path.glob('.PhotoCamera-install-*')))
+
+    def test_proc_game_detection(self):
+        proc = self.root / 'proc'
+        (proc / '123').mkdir(parents=True)
+        (proc / '123/cmdline').write_bytes(b'wine64\0Z:\\games\\VHOLUME-Win64-Shipping.exe\0')
+        self.assertTrue(installer.game_running(proc))
+        (proc / '123/cmdline').write_bytes(b'python3\0install-linux.py\0')
+        self.assertFalse(installer.game_running(proc))
+
+    @unittest.skipUnless(sys.platform == 'linux', 'Tests actual POSIX directory symlinks')
+    def test_symlink_mod_directory_rejected(self):
+        bin_path = self.game()
+        (bin_path / 'ue4ss/Mods').mkdir(parents=True)
+        outside = self.root / 'outside'
+        outside.mkdir()
+        (bin_path / 'ue4ss/Mods/VHOLUMEPhotoCamera').symlink_to(outside, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, 'symlinked'):
+            installer.install(PACKAGE, bin_path, running_check=lambda: False)
+        self.assertFalse(list(outside.iterdir()))
+
     def test_fresh_and_upgrade_preserve_every_old_file(self):
         bin_path = self.game()
         with contextlib.redirect_stdout(io.StringIO()):
@@ -159,6 +207,68 @@ class InstallerTests(Fixtures):
 
 
 class BridgeTests(Fixtures):
+    @unittest.skipUnless(sys.platform == 'linux', 'Tests actual Proton-style POSIX drive mappings')
+    def test_real_proton_symlinks(self):
+        devices = self.prefix / 'dosdevices'
+        devices.mkdir()
+        (devices / 'c:').symlink_to('../drive_c', target_is_directory=True)
+        (devices / 'z:').symlink_to('/', target_is_directory=True)
+        photos = self.root / 'Photos café'
+        self.assertEqual(bridge.unix_path('Z:' + str(photos), self.prefix), photos.resolve())
+        self.assertEqual(bridge.windows_path(photos, self.prefix), 'Z:' + str(photos) + '/')
+        self.assertEqual(bridge.windows_path(self.prefix / 'drive_c', self.prefix), 'C:/')
+
+    @unittest.skipUnless(sys.platform == 'linux', 'Tests real POSIX session locking')
+    def test_duplicate_launcher_rejected(self):
+        import fcntl
+        base = self.root / 'Proton'
+        base.mkdir()
+        (base / 'install.json').write_text(json.dumps({'prefix': str(self.prefix)}))
+        with (base / '.bridge.lock').open('w') as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            with self.assertRaisesRegex(RuntimeError, 'already running'):
+                bridge.launch([sys.executable, '-c', 'pass'], base)
+
+    def test_worker_survives_reply_io_failure(self):
+        service = self.service()
+        (service.ipc / 'request-100-1.txt').write_text('Prepare\nC:/Bad/')
+        (service.ipc / 'request-100-2.txt').write_text('Prepare\nC:/Good/')
+        original = service.process
+        def process(path):
+            if path.name == 'request-100-1.txt':
+                raise OSError('simulated reply I/O failure')
+            original(path)
+        with patch.object(service, 'process', side_effect=process), contextlib.redirect_stderr(io.StringIO()):
+            worker = threading.Thread(target=service.worker)
+            worker.start()
+            try:
+                deadline = time.monotonic() + 3
+                while not (service.ipc / 'reply-100-2.txt').exists() and time.monotonic() < deadline:
+                    time.sleep(.02)
+                self.assertTrue((service.ipc / 'reply-100-2.txt').exists())
+                self.assertTrue(worker.is_alive())
+            finally:
+                service.close()
+                worker.join(timeout=3)
+        self.assertFalse(worker.is_alive())
+
+    def test_closing_service_stops_owned_desktop_tool(self):
+        service = self.service()
+        ready = self.root / 'desktop-ready'
+        child = "import pathlib,sys,time;pathlib.Path(sys.argv[1]).write_text('ready');time.sleep(30)"
+        worker = threading.Thread(target=service.run_tool, args=([sys.executable, '-c', child, str(ready)],))
+        worker.start()
+        deadline = time.monotonic() + 3
+        while not ready.exists() and time.monotonic() < deadline:
+            time.sleep(.02)
+        try:
+            self.assertTrue(ready.exists())
+        finally:
+            service.close()
+            worker.join(timeout=5)
+        self.assertFalse(worker.is_alive())
+        self.assertEqual(service.run_tool([sys.executable, '-c', 'pass'])[0], 1)
+
     def test_unix_z_drive_and_specific_drive_mapping(self):
         class VirtualPath(PurePosixPath):
             def exists(self):
@@ -244,23 +354,27 @@ class BridgeTests(Fixtures):
         result = self.root / 'child result.json'
         child = "import os,sys,json,pathlib;pathlib.Path(sys.argv[1]).write_text(json.dumps({'override':os.environ['WINEDLLOVERRIDES'],'args':sys.argv[2:]}));sys.exit(7)"
         fake_fcntl = types.SimpleNamespace(LOCK_EX=1, LOCK_NB=2, flock=lambda *args: None)
-        with patch.dict(sys.modules, {'fcntl': fake_fcntl}), patch.dict(os.environ, {'WINEDLLOVERRIDES': 'winmm=n,b'}):
+        locks = patch.dict(sys.modules, {'fcntl': fake_fcntl}) if sys.platform == 'win32' else contextlib.nullcontext()
+        with locks, patch.dict(os.environ, {'WINEDLLOVERRIDES': 'winmm=n,b'}):
             self.assertEqual(bridge.launch([sys.executable, '-c', child, str(result), 'argument with spaces'], base), 7)
         actual = json.loads(result.read_text())
         self.assertEqual(actual, {'override': 'winmm=n,b;dwmapi=n,b', 'args': ['argument with spaces']})
         self.assertFalse((base / 'ipc/ready').exists())
 
     def test_lua_folder_protocol(self):
-        if sys.platform != 'win32':
-            self.skipTest('This harness uses the development workstation Lua DLL')
-        lua_dll = Path('C:/Program Files/Blackmagic Design/DaVinci Resolve/lua5.1.dll')
-        if not lua_dll.is_file():
-            self.skipTest('Lua 5.1 DLL unavailable')
-        lua = ctypes.CDLL(str(lua_dll))
+        lua_name = 'C:/Program Files/Blackmagic Design/DaVinci Resolve/lua5.1.dll' if sys.platform == 'win32' else ctypes.util.find_library('lua5.4')
+        if not lua_name:
+            self.fail('Install liblua5.4-0 to run the Lua integration check')
+        lua = ctypes.CDLL(str(lua_name))
         lua.luaL_newstate.restype = ctypes.c_void_p
         lua.luaL_openlibs.argtypes = [ctypes.c_void_p]
         lua.luaL_loadstring.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
-        lua.lua_pcall.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_int]
+        if sys.platform == 'win32':
+            lua.lua_pcall.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_int]
+            invoke = lambda: lua.lua_pcall(state, 0, 0, 0)
+        else:
+            lua.lua_pcallk.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_ssize_t, ctypes.c_void_p]
+            invoke = lambda: lua.lua_pcallk(state, 0, 0, 0, 0, None)
         lua.lua_tolstring.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p]
         lua.lua_tolstring.restype = ctypes.c_char_p
         lua.lua_close.argtypes = [ctypes.c_void_p]
@@ -268,16 +382,20 @@ class BridgeTests(Fixtures):
         lua.luaL_openlibs(state)
         self.addCleanup(lambda: lua.lua_close(state))
         def run(code):
-            error = lua.luaL_loadstring(state, code.encode('utf-8')) or lua.lua_pcall(state, 0, 0, 0)
+            error = lua.luaL_loadstring(state, code.encode('utf-8')) or invoke()
             if error:
                 self.fail(lua.lua_tolstring(state, -1, None).decode())
+        for path in [*(MOD / 'Scripts').glob('*.lua'), *(OVERLAY / 'Scripts').glob('*.lua')]:
+            run('assert(loadfile(' + json.dumps(path.as_posix()) + '))')
         scripts = self.root / 'Scripts'
         ipc = self.root / 'Proton/ipc'
         saved = self.root / 'Saved'
         for path in (scripts, ipc, saved):
             path.mkdir(parents=True)
-        name = str(saved).replace('\\', '/')
-        source = str(MOD / 'Scripts/photo_folder.lua').replace('\\', '/')
+        native_root = str(self.root).replace('\\', '/')
+        run('local open,rename,remove=io.open,os.rename,os.remove; local function path(p) return (p:gsub("^C:/Saved",' + json.dumps(native_root + '/Saved') + ')) end; io.open=function(p,...) return open(path(p),...) end; os.rename=function(a,b) return rename(path(a),path(b)) end; os.remove=function(p) return remove(path(p)) end')
+        name = 'C:/Saved'
+        source = str(OVERLAY / 'Scripts/photo_folder.lua').replace('\\', '/')
         run('photos=dofile(' + json.dumps(source) + ')(' + json.dumps(str(scripts).replace('\\', '/') + '/') + '); photos.load(' + json.dumps(name) + ')')
         request = next(ipc.glob('request-*.txt'))
         self.assertEqual(request.read_text(), 'Prepare\n' + name + '/Screenshots/Windows/')

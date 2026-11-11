@@ -1,0 +1,59 @@
+name: Linux package QA
+
+on:
+  push:
+    branches: ["linux/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            python: "3.9"
+          - os: ubuntu-24.04
+            python: "3.12"
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install Lua 5.4 runtime
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq liblua5.4-0
+      - name: Download the released Windows loader bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p .work/deps
+          gh release download v1.0.2 --repo "$GITHUB_REPOSITORY" --pattern VHOLUME-Photo-Camera-Installer.zip --dir .work/deps
+      - name: Build Linux package
+        run: |
+          python installer/linux/Build-Linux.py --loader-bundle .work/deps/VHOLUME-Photo-Camera-Installer.zip --output .work/dist
+          python --version > .work/runtime.txt
+          uname -a >> .work/runtime.txt
+      - name: Check both platform payloads and native Linux behavior
+        run: |
+          python installer/linux/tests/test_linux.py 2>&1 | tee .work/test.log
+      - name: Rebuild and compare checksums
+        run: |
+          cp .work/dist/SHA256SUMS.txt .work/first-build.sha256
+          python installer/linux/Build-Linux.py --loader-bundle .work/deps/VHOLUME-Photo-Camera-Installer.zip --output .work/dist
+          cmp .work/first-build.sha256 .work/dist/SHA256SUMS.txt
+          cd .work/dist && sha256sum --check SHA256SUMS.txt
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: linux-qa-${{ matrix.os }}-python-${{ matrix.python }}
+          if-no-files-found: error
+          path: |
+            .work/test.log
+            .work/runtime.txt
+            .work/dist/*.zip
+            .work/dist/SHA256SUMS.txt

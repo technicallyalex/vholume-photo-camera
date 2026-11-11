@@ -95,15 +95,38 @@ class FolderService:
         for key in ('LD_PRELOAD', 'LD_LIBRARY_PATH', 'PYTHONHOME', 'PYTHONPATH'):
             self.env.pop(key, None)
         self.child = None
+        self.child_lock = threading.Lock()
         self.stop = threading.Event()
+        self.failed_requests = set()
 
     def run_tool(self, args):
-        self.child = subprocess.Popen(args, env=self.env, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                      text=True)
-        stdout, stderr = self.child.communicate()
-        code = self.child.returncode
-        self.child = None
-        return code, stdout.strip(), stderr.strip()
+        with self.child_lock:
+            if self.stop.is_set():
+                return 1, '', 'Game session ended'
+            child = subprocess.Popen(args, env=self.env, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                     text=True)
+            self.child = child
+        try:
+            stdout, stderr = child.communicate()
+            return child.returncode, stdout.strip(), stderr.strip()
+        finally:
+            with self.child_lock:
+                if self.child is child:
+                    self.child = None
+
+    def close(self):
+        self.stop.set()
+        with self.child_lock:
+            child = self.child
+        if child and child.poll() is None:
+            try:
+                child.terminate()
+                child.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                child.kill()
+                child.wait(timeout=2)
+            except ProcessLookupError:
+                pass
 
     def choose(self, initial):
         if shutil.which('zenity'):
@@ -164,7 +187,14 @@ class FolderService:
             for request in sorted(self.ipc.glob('request-*.txt')):
                 if self.stop.is_set():
                     return
-                self.process(request)
+                if request.name in self.failed_requests:
+                    continue
+                try:
+                    self.process(request)
+                except OSError as error:
+                    # A failed reply must not terminate the worker or block later requests.
+                    self.failed_requests.add(request.name)
+                    print('Photo Camera request I/O:', error, file=sys.stderr)
 
 
 def launch(argv, base=None):
@@ -207,9 +237,7 @@ def launch(argv, base=None):
                 game.wait()
             return 130
         finally:
-            service.stop.set()
-            if service.child and service.child.poll() is None:
-                service.child.terminate()
+            service.close()
             worker.join(timeout=2)
             (ipc / 'ready').unlink(missing_ok=True)
 
