@@ -1461,4 +1461,4 @@ else
     LoopInGameThreadWithDelay(1, tick)
 end
 
-log("Optical Finder Preview 1.1.0-alpha.9 ready. Press 5, F9, or controller View to equip.")
+log("Photo Camera 1.1.0 ready. Press 5, F9, or controller View to equip.")

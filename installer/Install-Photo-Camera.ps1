@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 param([string]$GamePath, [string]$SteamPath)
 
 $ErrorActionPreference = 'Stop'
@@ -6,7 +6,7 @@ $modName = 'VHOLUMEPhotoCamera'
 $exeName = 'VHOLUME-Win64-Shipping.exe'
 $modZip = Join-Path $PSScriptRoot 'VHOLUME-Photo-Camera.zip'
 $loaderZip = Join-Path $PSScriptRoot 'UE4SS_v3.0.1-1011-gb50986bd.zip'
-$modHash = 'C1B05BDA328E3651140AEA24BD3CA8FDD65A6C29C120EB6D84D5640A07BFACA7'
+$modHash = '56FDD8B2E5BF80DAD42FB5910F8C9A3CF247B408DB76FC95E31DB2E32330A94A'
 $loaderHash = 'AA181789DC7226BCEC94F13F054FF10477D7383321FFB98DBC3666A159B182A8'
 $loaderDllHash = '2AD348BF2025BD26B2AA63B478D9813AFBD4E656C9BCFB3FDF6752C4D285F298'
 
@@ -105,7 +105,7 @@ function Install-PhotoCamera([string]$bin) {
             (Test-Path -LiteralPath (Join-Path $bin 'UE4SS.dll')) -or (Test-Path -LiteralPath (Join-Path $bin 'xinput1_3.dll')))) {
         throw "Found a partial or custom UE4SS installation in $bin. Use the manual install steps for this setup."
     }
-    Write-Host "Installing Photo Camera in $bin"
+    Write-Host "Installing Photo Camera 1.1.0 in $bin"
     if ($existingLoader) {
         Write-Host 'Using your existing UE4SS installation.'
         if ((Get-FileHash -LiteralPath $core).Hash -ne $loaderDllHash) {
