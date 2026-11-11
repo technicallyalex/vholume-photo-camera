@@ -20,7 +20,8 @@ return function(ue, binds)
             ue.object("/Script/Engine.Default__SubsystemBlueprintLibrary"),pc,
             ue.object("/Script/EnhancedInput.EnhancedInputLocalPlayerSubsystem"))
         assert(ue.valid(subsystem),"Camera input subsystem is unavailable")
-        local protected = {W=true,A=true,S=true,D=true,SpaceBar=true,MouseX=true,MouseY=true,Mouse2D=true,
+        local protected = {W=true,A=true,S=true,D=true,SpaceBar=true,LeftControl=true,RightControl=true,
+            MouseX=true,MouseY=true,Mouse2D=true,
             Gamepad_LeftX=true,Gamepad_LeftY=true,Gamepad_RightX=true,Gamepad_RightY=true}
         for _, name in ipairs(movement) do
             local action = ue.load("/Game/Inputs/Actions/"..name.."."..name)

@@ -65,11 +65,11 @@ return function(ue, ui, rect, binds, controller, draw)
         if i > 1 then block(cellX,lcdY+3*u,u,21*u,rgb(.31,.38,.26)) end
         shortcut(id,title,input,cellX+5*u,lcdY+2*u,cellW-10*u,lcdInk,lcdActive)
         if id == "shutter" or id == "aperture" or id == "iso" then
-            digits[id] = buildDigits(ue,draw,dpi,cellX+3*u,lcdY+9*u,cellW-18*u,16*u)
+            digits[id] = buildDigits(ue,draw,dpi,cellX+6*u,lcdY+10*u,cellW-24*u,13*u)
             autoTags[id] = label(cellX+cellW-20*u,lcdY+17*u,18*u,5,lcdInk,"AUTO",2)
             ue.call("/Script/UMG.Widget:SetVisibility",autoTags[id],2)
         else
-            fields[id] = label(cellX+2*u,lcdY+9*u,cellW-4*u,12.5,lcdInk,nil,1)
+            fields[id] = label(cellX+6*u,lcdY+10*u,cellW-12*u,10,lcdInk,nil,1)
         end
         cellX = cellX+cellW
     end

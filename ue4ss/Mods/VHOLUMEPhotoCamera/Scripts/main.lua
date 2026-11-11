@@ -1458,4 +1458,4 @@ else
     LoopInGameThreadWithDelay(1, tick)
 end
 
-log("Optical Finder Preview 1.1.0-alpha.7 ready. Press 5, F9, or controller View to equip.")
+log("Optical Finder Preview 1.1.0-alpha.8 ready. Press 5, F9, or controller View to equip.")

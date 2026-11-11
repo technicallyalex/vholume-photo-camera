@@ -1,6 +1,6 @@
 # VHOLUME Photo Camera Optical Finder Preview
 
-**Version 1.1.0-alpha.7** · Windows · Separate preview build
+**Version 1.1.0-alpha.8** · Windows · Separate preview build
 
 ## Install and switch back
 
@@ -69,6 +69,8 @@ The wheel chords apply with the finder raised. Change the four letter-key modifi
 
 A dedicated Enhanced Input context gives camera controls priority while the finder is raised. Movement and mouse-look mappings remain available, including movement remaps. The camera context is removed when the finder lowers, Studio or a game menu opens, the camera is stowed, or the level changes. Held camera keys must be released before their game actions can resume.
 
+**Ctrl** continues to reach the game for sliding while the finder is raised. **Ctrl + wheel** also adjusts aperture. Alpha.8 reduces the large LCD values and adds padding around the readouts.
+
 ## Controller
 
 The layout uses Xbox-style labels. The left stick moves and the right stick aims.
@@ -96,3 +98,5 @@ Live checks also covered the Game exposure path, both priority modes, the minimu
 Alpha.3 saved sharp stationary and blurred panning photos at one second, a two-second portrait photo, and a 1/250 s instant photo in a live Steam session. Cancelling a running exposure left no photo or partial file.
 
 Alpha.7 native checks confirmed that the camera input context removes the game's restart and raise-hands bindings while preserving movement and look mappings, then restores the original mappings on removal. The revised finder and rotating Exposure model were also constructed and captured in the running game. Offline checks covered keybind migration, editable wheel modifiers, duplicate rejection, 120 finder layouts, and the expanded keybind menu.
+
+Alpha.8 native checks confirmed that Left Ctrl remains mapped to the game's crouch/slide action while camera input priority is active, with movement/look mappings preserved and original mappings restored on removal. The padded LCD values were captured in-game with Game mode and a 600 mm lens.
