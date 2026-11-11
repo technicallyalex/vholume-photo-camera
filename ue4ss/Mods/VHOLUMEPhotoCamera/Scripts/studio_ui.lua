@@ -181,7 +181,7 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
         block(left,top,keyW,keyH,color(.025,.038,.032,.98))
         block(left,top,keyW,2*unit,gold)
         label(innerX,top+8*unit,innerW,30*unit,20,"PHOTO STUDIO / KEYBINDS",ink)
-        local tabW = (innerW-15*unit)/4
+        local tabW = (innerW-(#binds.groups-1)*5*unit)/#binds.groups
         for i, group in ipairs(binds.groups) do
             local px = innerX+(i-1)*(tabW+5*unit)
             button(px,top+41*unit,tabW,23*unit,group[1]:upper(),"bindPage",nil,i)
@@ -350,10 +350,7 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
         local icon = card == "subjects" and "subject" or card
         glyph(icon,px+9*unit,py+5*unit,12*unit)
         label(px+27*unit,py+5*unit,tileW-34*unit,17*unit,9,("%02d  %s"):format(i,card:upper()),quiet)
-        if card == "exposure" then
-            glyph("exposure",px+66*unit,py+31*unit,46*unit)
-            tile.mode = label(px+49*unit,py+83*unit,80*unit,19*unit,12,"",gold,true)
-        else
+        do
             local clip = add("CanvasPanel",px+(tileW-cellW)/2,py+19*unit,cellW,cellH)
             ue.call(widgetPath.."SetClipping",clip,1)
             tile.image = add("Image",0,0,8*cellW,6*cellH,clip)
@@ -416,7 +413,6 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
             tile.rule:SetBrushColor(i == selected and gold or color(.21,.27,.21))
             if card == "exposure" then
                 local mode = config.modes[config.mode]
-                tile.mode:SetText(FText(mode[1]))
                 tile.value:SetText(FText(mode[2]))
                 tile.detail:SetText(FText(config.auto and config.mode~=1 and "Auto ISO on"
                     or "ISO "..config.isos[config.iso]))
@@ -424,9 +420,10 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
                 tile.value:SetText(FText(data[1]))
                 tile.detail:SetText(FText(data[2]))
             end
-            if tile.image and tile.art ~= data[3] then
-                tile.image:SetBrushFromTexture(texture("Studio/"..data[3]),false)
-                tile.art = data[3]
+            local art = card == "exposure" and "exposure" or data[3]
+            if tile.image and tile.art ~= art then
+                tile.image:SetBrushFromTexture(texture("Studio/"..art),false)
+                tile.art = art
                 tile.start = previous
                 drawFrame(tile,0)
             end

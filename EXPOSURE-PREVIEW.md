@@ -1,6 +1,6 @@
 # VHOLUME Photo Camera Optical Finder Preview
 
-**Version 1.1.0-alpha.6** · Windows · Separate preview build
+**Version 1.1.0-alpha.7** · Windows · Separate preview build
 
 ## Install and switch back
 
@@ -8,11 +8,11 @@ Close VHOLUME. Extract the preview installer ZIP and run **Install Finder Previe
 
 For a manual install, back up the existing mod outside **Mods**. Copy **VHOLUMEPhotoCamera** from the manual ZIP’s **ue4ss\Mods** into the game’s **VHOLUME\Binaries\Win64\ue4ss\Mods**. This build uses the same mod slot as the stable release.
 
-To switch back, close the game, move the current **VHOLUMEPhotoCamera** folder out of **Mods**, then move the dated backup into **Mods** and rename it **VHOLUMEPhotoCamera**. You can also reinstall any earlier build from its ZIP. This preview saves keybinds, aim scaling, and Auto ISO options in **VHOLUMEPhotoCamera.keys.finder-preview** and reads compatible settings from the exposure preview or stable build until it has its own settings.
+To switch back, close the game, move the current **VHOLUMEPhotoCamera** folder out of **Mods**, then move the dated backup into **Mods** and rename it **VHOLUMEPhotoCamera**. You can also reinstall any earlier build from its ZIP. This preview saves keybinds and options in **VHOLUMEPhotoCamera.keys.input-preview** and imports compatible settings from earlier previews or the stable build on first use.
 
 ## Optical finder
 
-The raised finder shows a larger, centered capture area. At 1920 × 1080, the 3:2 frame is 1428 × 952 pixels. A slim exposure meter above the image has a smoothly moving marker. The bottom LCD shows mode, shutter, aperture, ISO, and lens, with segmented camera numerals. Larger focus lamps sit just below the center reticle. Focus controls sit beside the LCD or below it on narrower screens. Aspect and film readouts move below the image when the side margins are narrow.
+The raised finder leaves room for the camera readouts. At 1920 × 1080, the 3:2 frame is 1380 × 920 pixels. A thin exposure scale is centered above the image with an amber pointer. The recessed LCD shows mode, shutter, aperture, ISO, and lens, with segmented numerals and shaded glass. Focus lamps sit at the bottom-left beside the LCD. Focus controls sit on the right or below the LCD on narrower screens. Aspect and film readouts move below the image when the side margins are narrow.
 
 Shortcuts appear directly in the labels for their settings and switch with the active input device. Keyboard labels reflect customized bindings. Hold a wheel modifier or controller shoulder button to highlight the settings it adjusts. Photo Studio’s Frame card offers the new Optical reticle alongside Square, Circle, and None.
 
@@ -24,7 +24,7 @@ Under **Exposure → Edit Exposure**, select **Depth of field strength** for nat
 
 In Photo Studio, select **Photos → Choose Folder** to open the Windows folder chooser. The chosen folder is checked for write access and saved for future sessions. **Open Folder** opens the current destination, and **Use Default** restores the game's screenshot directory. Instant photos and motion exposures both use this destination. Canceling the chooser keeps the previous folder.
 
-Exposure uses a camera-style +/− icon. The exposure settings show a short hint for the hovered or focused control, with the selected mode as the default.
+The Exposure card has a rotating low-poly +/− model. The exposure settings show a short hint for the hovered or focused control, with the selected mode as the default.
 
 ## Exposure
 
@@ -60,14 +60,14 @@ Right-click raises or lowers the finder. Left-click takes a photo. Middle-click 
 | **Ctrl** | Aperture |
 | **Alt** | Shutter speed |
 | **Ctrl + Alt** | Manual ISO |
-| **Tab** | Lens |
-| **Tab + Ctrl** | Exposure mode |
-| **Tab + Alt** | Frame ratio |
-| **Tab + Shift** | Film look |
+| **R** | Lens |
+| **U** | Exposure mode |
+| **Y** | Frame ratio |
+| **T** | Film look |
 
-The wheel chords apply with the finder raised. In Studio, **Tab** still navigates controls. **Tab**, **Ctrl**, and **Alt** have fixed roles in the preview’s wheel controls. Use either **Shift** key for the fine-focus binding.
+The wheel chords apply with the finder raised. Change the four letter-key modifiers in **Keybinds → Wheel**. **Ctrl**, **Alt**, and their combination adjust aperture, shutter speed, and ISO. Use either **Shift** key for fine focus. In Studio, **Tab** navigates controls.
 
-The existing Tab chords can also trigger the leaderboard, Steam overlay, and Windows app switching. Use the bracket keys for lenses and the Studio cards for film and aspect ratio while testing this preview. Changes to binding defaults and game input consumption are awaiting review.
+A dedicated Enhanced Input context gives camera controls priority while the finder is raised. Movement and mouse-look mappings remain available, including movement remaps. The camera context is removed when the finder lowers, Studio or a game menu opens, the camera is stowed, or the level changes. Held camera keys must be released before their game actions can resume.
 
 ## Controller
 
@@ -94,3 +94,5 @@ Alpha.2 calibrates the exposure scale to VHOLUME’s baked lighting. In a live S
 Live checks also covered the Game exposure path, both priority modes, the minimum and maximum Auto ISO limits, and Aperture Priority’s slower shutter at the ISO ceiling. Simulated controller button states exercised Studio navigation, finder activation, exposure adjustments, Auto ISO, capture, and stowing. Physical controller detection and Steam Input mapping remain unverified.
 
 Alpha.3 saved sharp stationary and blurred panning photos at one second, a two-second portrait photo, and a 1/250 s instant photo in a live Steam session. Cancelling a running exposure left no photo or partial file.
+
+Alpha.7 native checks confirmed that the camera input context removes the game's restart and raise-hands bindings while preserving movement and look mappings, then restores the original mappings on removal. The revised finder and rotating Exposure model were also constructed and captured in the running game. Offline checks covered keybind migration, editable wheel modifiers, duplicate rejection, 120 finder layouts, and the expanded keybind menu.

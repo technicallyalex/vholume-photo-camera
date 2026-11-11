@@ -181,6 +181,18 @@ def objects():
     }
     models = {name: roll(*colors) for name, colors in palette.items()}
     models["camera"] = camera()
+    metal, face, ink = (145,159,142), (47,65,57), (218,202,151)
+    models["exposure"] = (
+        box(0,0,0,1.48,.30,1.38,metal)
+        + box(0,-.18,0,1.34,.10,1.24,face)
+        + box(0,.18,0,1.34,.10,1.24,face)
+    )
+    for side in (-1,1):
+        depth = side*.255
+        models["exposure"] += (box(-.32,depth,.29,.43,.06,.08,ink)
+            + box(-.32,depth,.29,.08,.06,.43,ink)
+            + box(.32,depth,-.29,.43,.06,.08,ink)
+            + segment((-.49,depth,-.48),(.49,depth,.48),.045,.055,ink))
     models.update(prime_lenses())
     models["instant-color-600"] = (box(0, 0, 0, 1.35, .29, 1.45, (218, 216, 188))
                          + box(0, -.16, .13, 1.03, .05, 1.0, (66, 111, 104))

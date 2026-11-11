@@ -1,5 +1,6 @@
 """Build the optical finder's LCD face and antialiased numeral atlas."""
 from pathlib import Path
+from math import exp
 
 from PIL import Image, ImageDraw
 
@@ -7,18 +8,23 @@ from PIL import Image, ImageDraw
 def build(output):
     output.mkdir(parents=True, exist_ok=True)
     plate = Image.new("RGBA", (2048, 128))
-    painter = ImageDraw.Draw(plate)
+    pixels = plate.load()
     for y in range(128):
-        glow = 1 - abs(y - 60) / 70
-        painter.line((0, y, 2047, y), fill=(int(155 + 16*glow), int(169 + 17*glow), int(139 + 13*glow), 255))
+        glow = 12*exp(-((y-65)/54)**2)
+        shadow = 48*exp(-y/12) + 16*exp(-(127-y)/6)
+        for x in range(2048):
+            edge = 12*(abs(x-1024)/1024)**4
+            reflection = 5*exp(-((y-27-x*.012)/14)**2)
+            tint = glow-shadow-edge+reflection
+            pixels[x,y] = (int(153+tint),int(168+tint),int(137+tint),255)
+    painter = ImageDraw.Draw(plate)
     painter.rectangle((0, 0, 2047, 127), outline=(54, 66, 51, 255), width=5)
-    painter.line((7, 7, 2040, 7), fill=(205, 212, 180, 255), width=2)
+    painter.line((7, 7, 2040, 7), fill=(78,94,71,255), width=3)
+    painter.line((7, 120, 2040, 120), fill=(205,212,180,255), width=2)
     plate.save(output / "finder-lcd.png", optimize=True)
-    meter = Image.new("RGBA",(1280,108))
-    painter = ImageDraw.Draw(meter)
-    painter.rounded_rectangle((2,2,1277,105),radius=26,fill=(14,22,18,247),outline=(62,77,66,235),width=2)
-    painter.line((28,5,1251,5),fill=(83,96,80,165),width=2)
-    meter.save(output / "finder-meter.png",optimize=True)
+    pointer = Image.new("RGBA",(96,64))
+    ImageDraw.Draw(pointer).polygon([(7,8),(89,8),(48,58)],fill=(255,205,133,255))
+    pointer.resize((48,32),Image.Resampling.LANCZOS).save(output / "finder-pointer.png",optimize=True)
 
     cell_w, cell_h, scale = 36, 56, 4
     atlas = Image.new("RGBA", (16*cell_w*scale, cell_h*scale))

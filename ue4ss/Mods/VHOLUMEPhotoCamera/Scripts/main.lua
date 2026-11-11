@@ -68,6 +68,7 @@ end
 
 local ue = { valid = valid, object = object, call = call, load = load }
 local binds = dofile(scriptPath .. "bindings.lua")(ue, log, exposure)
+local cameraInput = dofile(scriptPath .. "camera_input.lua")(ue,binds)
 local pad = dofile(scriptPath .. "gamepad.lua")(ue, binds)
 local bindingsLoaded
 local audio = dofile(scriptPath .. "audio.lua")(ue, assetPath, log)
@@ -335,6 +336,7 @@ local function hideLocalBody(active)
 end
 
 local function releaseView(active, controller, pawn)
+    cameraInput.disable()
     restoreLookScales(active)
     for _, mesh in ipairs(active.hiddenMeshes or {}) do
         if valid(mesh) then call("/Script/Engine.SceneComponent:SetHiddenInGame", mesh, false, false) end
@@ -418,9 +420,11 @@ local function closeStudio(active)
     setStudioCursor(active,false)
     setStudioInput(active,false)
     if active.ui and valid(active.ui.widget) then active.ui.visible(not active.menuOpen) end
+    if active.raised and not active.menuOpen then cameraInput.enable(active.pc) end
 end
 
 local function showStudio(active)
+    cameraInput.disable()
     if active.placing then subjects.cancel(active); updateLabels(active) end
     active.studioCard = active.studioCard or 1
     buildOptions(active,gate(active.pc,active.portrait))
@@ -459,6 +463,7 @@ local function stow(departing)
     local pc = departing and active.pc or localPlayer()
     local pawn = departing and active.pawn or (valid(pc) and gameplay():GetPlayerPawn(pc, 0)) or nil
     local steps = {
+        function() cameraInput.disable() end,
         function() abortMotion(active) end,
         function() meter.release(active) end,
         function() optics.release(active, pc or active.pc) end,
@@ -482,6 +487,7 @@ end
 local function requestStow()
     if not state or state.stowAt then return end
     closeStudio(state)
+    cameraInput.disable()
     restoreLookScales(state)
     subjects.cancel(state)
     updateLabels(state)
@@ -554,6 +560,7 @@ local function raiseOrLower()
         active.readyAt = gameplay():GetRealTimeSeconds(active.pc) + 0.23
     end
     rebuildOverlay(active, gate(active.pc, active.portrait))
+    if active.raised then cameraInput.enable(active.pc) end
     present(active, wasRaised and "lower" or "raise")
 end
 
@@ -1286,6 +1293,8 @@ local function tick()
         if menuOpen and state then abortMotion(state,"EXPOSURE CANCELLED") end
         if state and menuOpen ~= state.menuOpen then
             state.menuOpen = menuOpen
+            if menuOpen then cameraInput.disable()
+            elseif state.raised and not state.studio then cameraInput.enable(pc) end
             updateLookScales(state)
             state.ui.visible(not state.studio and not menuOpen)
             if state.studio then
@@ -1449,4 +1458,4 @@ else
     LoopInGameThreadWithDelay(1, tick)
 end
 
-log("Optical Finder Preview 1.1.0-alpha.6 ready. Press 5, F9, or controller View to equip.")
+log("Optical Finder Preview 1.1.0-alpha.7 ready. Press 5, F9, or controller View to equip.")

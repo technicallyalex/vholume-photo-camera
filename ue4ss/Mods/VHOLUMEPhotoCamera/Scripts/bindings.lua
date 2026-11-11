@@ -21,6 +21,9 @@ return function(ue, log, exposure)
             {"menuLeft","Previous card","Left"}, {"menuRight","Next card","Right"},
             {"menuNext","Next value","Up"}, {"menuPrev","Previous value","Down"},
             {"menuSelect","Use selected card","Six"}},
+        {"Wheel",
+            {"dialLens","Lens wheel modifier","R"}, {"dialFilm","Film wheel modifier","T"},
+            {"dialRatio","Aspect ratio wheel modifier","Y"}, {"dialMode","Exposure mode wheel modifier","U"}},
     }
 
     local labels = {
@@ -45,7 +48,8 @@ return function(ue, log, exposure)
     local modifiers = {
         LeftShift=true,RightShift=true,LeftControl=true,RightControl=true,LeftAlt=true,RightAlt=true,
     }
-    local reserved = { F9=true,Enter=true,Tab=true }
+    local reserved = { F9=true,Enter=true,Tab=true,W=true,A=true,S=true,D=true,SpaceBar=true }
+    local wheelActions = {lens="dialLens",film="dialFilm",ratio="dialRatio",mode="dialMode"}
     local choices, allowed, keys = {}, {}, {}
     local function add(name)
         choices[#choices+1] = name
@@ -104,20 +108,17 @@ return function(ue, log, exposure)
         return ue.call(down,pc,binds.raw("LeftShift")) or ue.call(down,pc,binds.raw("RightShift"))
     end
 
-    binds.wheelChords = {
-        mode="Tab + Ctrl", ratio="Tab + Alt", film="Tab + Shift", lens="Tab",
-        iso="Ctrl + Alt", aperture="Ctrl", shutter="Alt",
-    }
+    function binds.wheelChord(id)
+        if wheelActions[id] then return binds.token(wheelActions[id]) end
+        return ({iso="Ctrl + Alt",aperture="Ctrl",shutter="Alt"})[id]
+    end
 
     local function wheelDial(pc)
         local function held(name) return ue.call(down,pc,binds.raw(name)) end
         local ctrl = held("LeftControl") or held("RightControl")
         local alt = held("LeftAlt") or held("RightAlt")
-        if held("Tab") then
-            if ctrl then return "mode" end
-            if alt then return "ratio" end
-            if binds.shiftDown(pc) then return "film" end
-            return "lens"
+        for _,id in ipairs({"mode","ratio","film","lens"}) do
+            if held(current[wheelActions[id]]) then return id end
         end
         if ctrl and alt then return "iso" end
         if ctrl then return "aperture" end
@@ -128,6 +129,7 @@ return function(ue, log, exposure)
         if not allowed[name] or reserved[name] then return false end
         if name == "LeftMouseButton" and id ~= "shoot" then return false end
         if id == "fine" then return name == "LeftShift" or name == "RightShift" end
+        if id:sub(1,4) == "dial" and name:find("MouseScroll",1,true) then return false end
         return not modifiers[name]
     end
 
@@ -146,10 +148,11 @@ return function(ue, log, exposure)
     function binds.load(saved)
         if path then return end
         local stable = saved:gsub("[/\\]+$","").."/VHOLUMEPhotoCamera.keys"
-        local previous = stable..".exposure-preview"
-        path = stable..".finder-preview"
+        local previous = stable..".finder-preview"
+        path = stable..".input-preview"
         local file = io.open(path,"rb") or io.open(path..".bak","rb")
             or io.open(previous,"rb") or io.open(previous..".bak","rb")
+            or io.open(stable..".exposure-preview","rb") or io.open(stable..".exposure-preview.bak","rb")
             or io.open(stable,"rb") or io.open(stable..".bak","rb")
         if not file then return end
         local body = file:read(8193)
@@ -225,6 +228,22 @@ return function(ue, log, exposure)
     end
 
     function binds.persist() return save(current,aimScaling) end
+
+    function binds.cameraKeys()
+        local keys,seen = {},{}
+        local function include(name)
+            if not seen[name] then keys[#keys+1]=name; seen[name]=true end
+        end
+        for _,id in ipairs({"equip","studio","finder","shoot","lensPrev","lensNext","walk","frame",
+            "af","mode","dof","focusFar","focusNear","fine","apertureDown","apertureUp",
+            "dialLens","dialFilm","dialRatio","dialMode"}) do include(current[id]) end
+        for _,name in ipairs({"MouseWheelAxis","LeftControl","RightControl","LeftAlt","RightAlt","RightShift",
+            "Gamepad_Special_Left","Gamepad_LeftTrigger","Gamepad_RightTrigger","Gamepad_LeftShoulder",
+            "Gamepad_RightShoulder","Gamepad_LeftThumbstick","Gamepad_FaceButton_Bottom","Gamepad_FaceButton_Right",
+            "Gamepad_FaceButton_Left","Gamepad_FaceButton_Top","Gamepad_DPad_Left","Gamepad_DPad_Right",
+            "Gamepad_DPad_Up","Gamepad_DPad_Down"}) do include(name) end
+        return keys
+    end
 
     function binds.assign(id,name)
         if not permitted(id,name) then

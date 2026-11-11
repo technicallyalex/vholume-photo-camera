@@ -31,7 +31,7 @@ return function(ue, ui, rect, binds, controller, draw)
     end
     local function dial(id, pad)
         if controller then return pad end
-        return binds.wheelChords[id]:gsub(" ", "") .. "+Wheel"
+        return binds.wheelChord(id):gsub(" ", "") .. "+Wheel"
     end
 
     local headerWidth = math.min(w-16*u,math.max(fw,510*u))
@@ -75,15 +75,14 @@ return function(ue, ui, rect, binds, controller, draw)
     end
     ui.lens = fields.lens
 
-    local focusWidth = rect.bottomFocus and math.min(w-16*u,440*u)
+    local focusWidth = rect.bottomFocus and math.min(w-104*u,420*u)
         or math.min(215*u,(w-lcdW)/2-14*u)
-    local focusX = rect.bottomFocus and (w-focusWidth)/2 or lcdX+lcdW+8*u
+    local focusX = rect.bottomFocus and 92*u or lcdX+lcdW+8*u
     local focusY = bottom+(rect.bottomFocus and 31 or 2)*u
     local afWidth = focusWidth*.43
     shortcut("af","SINGLE-SHOT AF",controller and "A" or token("af"),focusX,focusY,afWidth,ink,gold)
-    local indicatorX = x+fw/2-29*u
-    local indicatorY = y+fh/2+math.min(fw,fh)*.13
-    draw.picture("Controls/finder-meter",indicatorX-3*u,indicatorY-2*u,64*u,22*u,.8)
+    local indicatorX = rect.bottomFocus and 8*u or lcdX-70*u
+    local indicatorY = rect.bottomFocus and bottom+34*u or lcdY+4*u
     local indicators = {}
     for i, name in ipairs({"near","aligned","far"}) do
         indicators[i] = draw.picture("Studio/focus-"..name,indicatorX+(i-1)*20*u,indicatorY,18*u,18*u,.16)
@@ -109,29 +108,25 @@ return function(ue, ui, rect, binds, controller, draw)
     end
 
 
-    local meterW = math.min(322*u,headerWidth*.63)
-    local meterX, meterY = w/2-meterW/2,headerY+2*u
-    draw.picture("Controls/finder-meter",meterX,meterY,meterW,26*u,1)
-    label(meterX+7*u,meterY+7*u,16*u,6,dim,"EV")
-    local track = meterW-100*u
-    local trackX, trackY = meterX+28*u,meterY+12*u
+    local track = math.min(236*u,headerWidth*.46)
+    local trackX, trackY = w/2-track/2,headerY+14*u
     local centerX = trackX+track/2
-    block(trackX,trackY,track,.7*u,rgb(.13,.18,.145))
+    label(trackX-27*u,trackY-5*u,20*u,6,dim,"EV")
+    block(trackX,trackY,track,.5*u,rgb(.20,.26,.215))
     for i=0,12 do
         local whole = i%3 == 0
         block(trackX+track*i/12,trackY-(whole and 2.5 or 1)*u,.6*u,(whole and 5 or 2)*u,dim)
-        if i == 0 or i == 6 or i == 12 then
+        if whole then
             local ev = i/3-2
             label(trackX+track*i/12-9*u,trackY+4*u,18*u,5,dim,
                 ev == 0 and "0" or string.format("%+d",ev),1)
         end
     end
     block(centerX-.5*u,trackY-4*u,u,8*u,ink)
-    local fill = block(centerX,trackY-.8*u,.5*u,2.2*u,gold)
-    local needle = block(centerX-u,trackY-3*u,2*u,6*u,gold)
-    fields.meter = label(trackX+track+8*u,meterY+7*u,58*u,8,gold,nil,2)
-    fields.warning = label(w/2+meterW/2+6*u,headerY+17*u,
-        (headerWidth-meterW)/2-8*u,7,gold,nil,2)
+    local needle = draw.picture("Controls/finder-pointer",centerX-3*u,trackY-7*u,6*u,5*u,1)
+    fields.meter = label(trackX+track+11*u,trackY-6*u,70*u,8,gold)
+    fields.warning = label(trackX+track+11*u,trackY+5*u,
+        (headerWidth-track)/2-15*u,6,gold,nil,2)
     local lastEV, meterGoal, meterOffset, meterAt = nil,nil,0,nil
     function ui.tickMeter(now)
         local elapsed = meterAt and math.max(0,now-meterAt) or 0
@@ -139,8 +134,6 @@ return function(ue, ui, rect, binds, controller, draw)
         if not meterGoal or math.abs(meterGoal-meterOffset) < .01 then return end
         meterOffset = meterOffset+(meterGoal-meterOffset)*(1-math.exp(-elapsed/.07))
         ue.call("/Script/UMG.Widget:SetRenderTranslation",needle,{X=meterOffset/dpi,Y=0})
-        ue.call("/Script/UMG.Widget:SetRenderTranslation",fill,{X=math.min(0,meterOffset)/dpi,Y=0})
-        ue.call("/Script/UMG.CanvasPanelSlot:SetSize",fill.Slot,{X=math.max(.5*u,math.abs(meterOffset))/dpi,Y=2.2*u/dpi})
     end
     function ui.setExposure(mode, values, speed)
         set("exposureMode",mode)
@@ -160,18 +153,13 @@ return function(ue, ui, rect, binds, controller, draw)
         if lastEV ~= ev then
             lastEV = ev
             ue.call("/Script/UMG.Widget:SetVisibility",needle,ev and 3 or 2)
-            ue.call("/Script/UMG.Widget:SetVisibility",fill,ev and 3 or 2)
             meterGoal = ev and math.max(-2,math.min(2,ev))*track/4 or nil
             if ev then
-                local color = math.abs(ev)<.17 and activeInk or gold
-                needle:SetBrushColor(color)
-                fill:SetBrushColor(color)
-                fields.meter:SetColorAndOpacity({SpecifiedColor=color,ColorUseRule=0})
+                fields.meter:SetColorAndOpacity({SpecifiedColor=gold,ColorUseRule=0})
             end
         end
     end
     ue.call("/Script/UMG.Widget:SetVisibility",needle,2)
-    ue.call("/Script/UMG.Widget:SetVisibility",fill,2)
 
     local filmKey, ratioKey = dial("film","RB+X"),dial("ratio","↓")
     local actions = {
