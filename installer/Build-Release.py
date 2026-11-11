@@ -36,7 +36,7 @@ def main():
     files = sorted(p for p in mod.rglob('*') if p.is_file())
     assert len(files) == 102, 'Unexpected release payload'
     assert not any(p.is_symlink() or p.suffix.lower() not in ('.lua', '.png', '.mp4', '.ps1', '.txt') for p in files)
-    assert 'Photo Camera 1.1.0 ready' in (mod / 'Scripts/main.lua').read_text(encoding='utf-8')
+    assert 'Photo Camera 1.0.2 ready' in (mod / 'Scripts/main.lua').read_text(encoding='utf-8')
     args.output.mkdir(parents=True, exist_ok=True)
     entries = {p.relative_to(root).as_posix(): p.read_bytes() for p in files}
     entries['README.md'] = (root / 'GUIDE.md').read_bytes()

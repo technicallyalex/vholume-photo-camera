@@ -2,7 +2,7 @@
 
 A Windows photo mode for VHOLUME with a 35 mm viewfinder, eight lenses, film looks, manual focus, and exposure controls.
 
-**New in v1.1.0: a complete camera controls overhaul.** A dedicated controller layout and modifier + scrollwheel controls put the camera's core functions at your fingertips, with shortcuts shown beside each viewfinder setting. The update also adds exposure modes, Auto ISO, motion captures, and a redesigned optical viewfinder. [Full controls guide](GUIDE.md)
+**New in v1.0.2: a complete camera controls overhaul.** A dedicated controller layout and modifier + scrollwheel controls put the camera's core functions at your fingertips, with shortcuts shown beside each viewfinder setting. The update also adds exposure modes, Auto ISO, motion captures, and a redesigned optical viewfinder. [Full controls guide](GUIDE.md)
 
 [Download the Windows installer ZIP](https://github.com/technicallyalex/vholume-photo-camera/releases/latest/download/VHOLUME-Photo-Camera-Installer.zip) · [Manual install ZIP](https://github.com/technicallyalex/vholume-photo-camera/releases/latest/download/VHOLUME-Photo-Camera.zip)
 

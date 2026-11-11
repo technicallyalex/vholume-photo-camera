@@ -1,6 +1,6 @@
 # VHOLUME Photo Camera Guide
 
-**Version 1.1.0** · Windows
+**Version 1.0.2** · Windows
 
 A complete camera controls overhaul introduces a dedicated controller layout and modifier + scrollwheel controls for focus, exposure, lenses, film looks, and framing. Shortcuts appear beside their settings in the viewfinder. See [Keyboard and mouse](#keyboard-and-mouse) and [Controller](#controller) for the layouts.
 

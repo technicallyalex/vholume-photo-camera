@@ -1,4 +1,4 @@
-# VHOLUME Photo Camera v1.1.0 — Camera Controls Overhaul
+# VHOLUME Photo Camera v1.0.2 — Camera Controls Overhaul
 
 A complete camera controls overhaul, with a dedicated controller layout and modifier + scrollwheel controls for the camera's core functions. Adjust settings directly from the viewfinder, with the relevant shortcuts shown beside each setting.
 
@@ -15,8 +15,8 @@ Download **VHOLUME-Photo-Camera-Installer.zip**, close the game, extract it, and
 
 Tested with VHOLUME Steam build **26455274** and UE4SS **3.0.1-1011-gb50986bd**. Physical controller hardware and Steam Input mappings remain unverified. Motion capture sample density depends on game frame rate.
 
-[Controls and settings](https://github.com/technicallyalex/vholume-photo-camera/blob/v1.1.0/GUIDE.md)
+[Controls and settings](https://github.com/technicallyalex/vholume-photo-camera/blob/v1.0.2/GUIDE.md)
 
-![Photo Studio](https://raw.githubusercontent.com/technicallyalex/vholume-photo-camera/v1.1.0/examples/photo-studio.png)
+![Photo Studio](https://raw.githubusercontent.com/technicallyalex/vholume-photo-camera/v1.0.2/examples/photo-studio.png)
 
-![Optical viewfinder](https://raw.githubusercontent.com/technicallyalex/vholume-photo-camera/v1.1.0/examples/viewfinder-optical.png)
+![Optical viewfinder](https://raw.githubusercontent.com/technicallyalex/vholume-photo-camera/v1.0.2/examples/viewfinder-optical.png)
