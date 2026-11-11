@@ -25,10 +25,22 @@ jobs:
       - uses: actions/setup-python@v7.1.0
         with:
           python-version: ${{ matrix.python }}
-      - name: Install Lua 5.4 runtime
-        timeout-minutes: 3
+      - name: Check out the official Lua 5.4.8 test runtime
+        uses: actions/checkout@v7.0.1
+        with:
+          repository: lua/lua
+          ref: v5.4.8
+          path: .work/lua-runtime
+          persist-credentials: false
+      - name: Build Lua 5.4 test library
         run: |
-          sudo apt-get -o Acquire::Retries=1 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 install -y -qq liblua5.4-0
+          sources=()
+          for file in .work/lua-runtime/*.c; do
+            case "$(basename "$file")" in lua.c|ltests.c|onelua.c) continue ;; esac
+            sources+=("$file")
+          done
+          cc -O2 -shared -fPIC -DLUA_USE_LINUX "${sources[@]}" -lm -ldl -o .work/liblua5.4.so
+          echo "VHOLUME_QA_LUA_LIBRARY=$PWD/.work/liblua5.4.so" >> "$GITHUB_ENV"
       - name: Download the released Windows loader bundle
         env:
           GH_TOKEN: ${{ github.token }}

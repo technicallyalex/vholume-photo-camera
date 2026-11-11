@@ -362,7 +362,7 @@ class BridgeTests(Fixtures):
         self.assertFalse((base / 'ipc/ready').exists())
 
     def test_lua_folder_protocol(self):
-        lua_name = 'C:/Program Files/Blackmagic Design/DaVinci Resolve/lua5.1.dll' if sys.platform == 'win32' else ctypes.util.find_library('lua5.4')
+        lua_name = 'C:/Program Files/Blackmagic Design/DaVinci Resolve/lua5.1.dll' if sys.platform == 'win32' else (os.environ.get('VHOLUME_QA_LUA_LIBRARY') or ctypes.util.find_library('lua5.4'))
         if not lua_name:
             self.fail('Install liblua5.4-0 to run the Lua integration check')
         lua = ctypes.CDLL(str(lua_name))
