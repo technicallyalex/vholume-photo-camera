@@ -25,6 +25,7 @@ film.stocks = {
 film.frames = {
     { "35 mm", 3, 2 }, { "Classic", 4, 3 }, { "Square", 1, 1 },
     { "Wide", 16, 9 }, { "Print", 5, 4 },
+    { "Ultrawide", 21, 9 }, { "Panoramic", 65, 24 },
 }
 
 local function vector(rgb, default)

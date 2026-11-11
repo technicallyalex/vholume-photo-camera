@@ -33,23 +33,31 @@ return function(ue, system, pose, refresh, binds, exposure)
         system():ExecuteConsoleCommand(pc, string.format("%s %.9g", name, number), pc)
     end
 
-    local function setQuality(active)
-        if active.dofSettings then return end
-        active.dofSettings = {}
+    local function setQuality(active, strength)
+        active.dofSettings = active.dofSettings or {}
         for _, setting in ipairs(quality) do
             local name, target = setting[1], setting[2]
-            local before = value(name, target)
-            if math.abs(before - target) > 0.000001 then
-                active.dofSettings[#active.dofSettings + 1] = {name, before, target}
-                set(active.pc, name, target)
+            if name == "r.DOF.Kernel.MaxForegroundRadius" or name == "r.DOF.Kernel.MaxBackgroundRadius" then
+                target = math.min(.15,target*strength)
+            end
+            local current = value(name,target)
+            local previous = active.dofSettings[name]
+            if previous then
+                if math.abs(current-previous[2]) < .000001 and math.abs(current-target) > .000001 then
+                    set(active.pc,name,target)
+                    previous[2] = target
+                end
+            elseif math.abs(current-target) > .000001 then
+                active.dofSettings[name] = {current,target}
+                set(active.pc,name,target)
             end
         end
     end
 
     function optics.release(active, pc)
         if active.dofSettings and ue.valid(pc) then
-            for _, setting in ipairs(active.dofSettings) do
-                local name, before, target = setting[1], setting[2], setting[3]
+            for name, setting in pairs(active.dofSettings) do
+                local before, target = setting[1], setting[2]
                 if math.abs(value(name, target) - target) < 0.000001 then set(pc, name, before) end
             end
         end
@@ -119,9 +127,9 @@ return function(ue, system, pose, refresh, binds, exposure)
         pp.bOverride_DepthOfFieldFocalDistance = true
         pp.DepthOfFieldFocalDistance = optics.enabled and optics.distance or 0
         if optics.enabled then
-            setQuality(active)
-            pp.bOverride_DepthOfFieldFstop = true
             local strength = exposure.dofStrengths[exposure.dofBoost]
+            setQuality(active,strength)
+            pp.bOverride_DepthOfFieldFstop = true
             pp.DepthOfFieldFstop = active.exposure.aperture/strength
             pp.bOverride_DepthOfFieldMinFstop = true
             pp.DepthOfFieldMinFstop = 1/strength
@@ -228,7 +236,7 @@ return function(ue, system, pose, refresh, binds, exposure)
     function optics.readout(active)
         local mode = optics.locked and "AF-L " or (optics.manual and "MF " or "AF ")
         local subject = active.subjectDistance
-        return mode .. meters(optics.distance), subject and ("SUBJ " .. meters(subject)) or "NO TARGET"
+        return mode .. meters(optics.distance), subject and meters(subject) or "NO TARGET"
     end
 
     return optics

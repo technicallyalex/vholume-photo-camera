@@ -36,11 +36,20 @@ return function(ue, ui, rect, binds, controller, draw)
 
     local headerWidth = math.min(w-16*u,math.max(fw,510*u))
     local headerX, headerY = (w-headerWidth)/2, y-31*u
-    local fields, last, digits, autoTags = {}, {}, {}, {}
+    local fields, last, digits, autoTags, fitSpecs = {}, {}, {}, {}, {}
+    local displayFont = ue.load("/Engine/EngineFonts/Roboto.Roboto")
     local function set(id, value)
         if last[id] == value then return end
         last[id] = value
-        if digits[id] then digits[id].set(value) else fields[id]:SetText(FText(value)) end
+        if digits[id] then digits[id].set(value)
+        else
+            local spec = fitSpecs[id]
+            if spec then
+                local size = math.min(spec.size,spec.width/(u*math.max(1,ui.textWidth(value,1))))
+                fields[id]:SetFont({FontObject=displayFont,TypefaceFontName=FName("Regular"),Size=size*u/dpi})
+            end
+            fields[id]:SetText(FText(value))
+        end
     end
 
     label(headerX,headerY+2*u,24*u,6.5,dim,"FRAME")
@@ -48,7 +57,7 @@ return function(ue, ui, rect, binds, controller, draw)
     fields.number = label(headerX+25*u,headerY+2*u,29*u,8,ink,nil,1)
     function ui.setFrameNumber(number) set("number",string.format("%03d",number)) end
 
-    local lcdW = math.min(w-16*u,550*u)
+    local lcdW = math.min(fw,550*u)
     local lcdX, lcdY = (w-lcdW)/2,bottom+2*u
     block(lcdX,lcdY,lcdW,27*u,edge)
     draw.picture("Controls/finder-lcd",lcdX+u,lcdY+u,lcdW-2*u,25*u,1)
@@ -70,34 +79,47 @@ return function(ue, ui, rect, binds, controller, draw)
             ue.call("/Script/UMG.Widget:SetVisibility",autoTags[id],2)
         else
             fields[id] = label(cellX+6*u,lcdY+10*u,cellW-12*u,10,lcdInk,nil,1)
+            fitSpecs[id] = {width=cellW-12*u,size=10}
         end
         cellX = cellX+cellW
     end
     ui.lens = fields.lens
+    function ui.setLens(value) set("lens",value) end
 
-    local focusWidth = rect.bottomFocus and math.min(w-104*u,420*u)
-        or math.min(215*u,(w-lcdW)/2-14*u)
-    local focusX = rect.bottomFocus and 92*u or lcdX+lcdW+8*u
-    local focusY = bottom+(rect.bottomFocus and 31 or 2)*u
-    local afWidth = focusWidth*.43
-    shortcut("af","SINGLE-SHOT AF",controller and "A" or token("af"),focusX,focusY,afWidth,ink,gold)
+    local sideWidth = 91*u
+    local focusX = x+fw+10*u
+    local panelY = y+fh/2-74*u
     local indicatorX = rect.bottomFocus and 8*u or lcdX-70*u
     local indicatorY = rect.bottomFocus and bottom+34*u or lcdY+4*u
     local indicators = {}
     for i, name in ipairs({"near","aligned","far"}) do
         indicators[i] = draw.picture("Studio/focus-"..name,indicatorX+(i-1)*20*u,indicatorY,18*u,18*u,.16)
     end
-    local modeX = focusX+afWidth+4*u
-    shortcut("mode","AF/MF",controller and "X" or token("mode"),modeX,focusY,focusX+focusWidth-modeX,ink,activeInk,2)
     local focusKeys = binds.focusTokens()
     for i, key in ipairs(focusKeys) do focusKeys[i] = mouseNames[key] or key end
     local focusInput = table.concat(focusKeys,"/")
     shortcut("focus","FOCUS",controller and "RB+←/→" or focusInput,
-        focusX,focusY+10*u,focusWidth*.47,ink,gold)
+        focusX,panelY,sideWidth,dim,gold)
+    block(focusX,panelY-4*u,sideWidth,.6*u,edge)
+    fields.focus = label(focusX,panelY+10*u,sideWidth,11,ink)
+    fitSpecs.focus = {width=sideWidth,size=11}
+    block(focusX,panelY+24*u,sideWidth,.6*u,edge)
+    label(focusX,panelY+28*u,sideWidth,6.3,dim,"SUBJECT DISTANCE")
+    fields.subject = label(focusX,panelY+38*u,sideWidth,11,ink)
+    fitSpecs.subject = {width=sideWidth,size=11}
+    label(focusX,panelY+62*u,sideWidth,6,dim,"FOCUS CONTROLS")
+    shortcut("af","SINGLE-SHOT AF",controller and "A" or token("af"),focusX,panelY+74*u,sideWidth,ink,gold)
+    shortcut("mode","AF/MF",controller and "X" or token("mode"),focusX,panelY+86*u,sideWidth,ink,activeInk)
     shortcut("fine","FINE FOCUS",controller and "RB+A+←/→" or token("fine").."+"..focusInput,
-        focusX+focusWidth*.47,focusY+10*u,focusWidth*.53,ink,gold,2)
-    ui.focus = label(focusX,focusY+20*u,focusWidth*.5,7,ink)
-    ui.subject = label(focusX+focusWidth*.5,focusY+20*u,focusWidth*.5,7,dim,nil,2)
+        focusX,panelY+98*u,sideWidth,ink,gold)
+    block(focusX,panelY+116*u,sideWidth,.6*u,edge)
+    label(focusX,panelY+120*u,sideWidth,6.3,dim,"LENS BLUR")
+    fields.blur = label(focusX,panelY+130*u,sideWidth,11,ink)
+    ui.focus,ui.subject = fields.focus,fields.subject
+    function ui.setFocusDetails(focus,subject)
+        set("focus",focus)
+        set("subject",subject)
+    end
     local lastIndicator
     function ui.setFocusIndicator(direction)
         if lastIndicator == direction then return end
@@ -170,36 +192,28 @@ return function(ue, ui, rect, binds, controller, draw)
         {"dof","DOF",controller and "B" or token("dof"),activeInk},
         {"walk","SLOW WALK",controller and "L3" or token("walk"),activeInk},
     }
-    if rect.sideControls then
-        local left, width = x-101*u,91*u
-        local formatY = y+fh*.37
+    do
+        local left, width = x-101*u,sideWidth
+        local formatY = panelY
         block(left,formatY-4*u,width,.7*u,edge)
-        shortcut("film","FILM",filmKey,left,formatY,width,ink,gold)
-        fields.film = label(left,formatY+10*u,width,10,ink)
+        shortcut("film","FILM",filmKey,left,formatY,width,dim,gold)
+        fields.film = label(left,formatY+10*u,width,11,ink)
+        fitSpecs.film = {width=width,size=11}
         block(left,formatY+24*u,width,.7*u,edge)
-        shortcut("ratio","ASPECT",ratioKey,left,formatY+28*u,width,ink,gold)
-        fields.ratio = label(left,formatY+38*u,width,10,ink)
-        local actionY = bottom-math.min(111*u,fh*.23)
-        block(left,actionY-3*u,width,.7*u,edge)
+        shortcut("ratio","ASPECT",ratioKey,left,formatY+28*u,width,dim,gold)
+        fields.ratio = label(left,formatY+38*u,width,11,ink)
+        fitSpecs.ratio = {width=width,size=11}
+        label(left,formatY+62*u,width,6,dim,"CAMERA CONTROLS")
+        local actionY = formatY+74*u
         for i, item in ipairs(actions) do
             shortcut(item[1],item[2],item[3],left,actionY+(i-1)*12*u,width,ink,item[4])
         end
-    else
-        local footerX, footerW = 8*u,w-16*u
-        local offset = rect.bottomFocus and 30*u or 0
-        fields.film = label(footerX,bottom+29*u+offset,footerW/2,7,ink,nil,1)
-        fields.ratio = label(footerX+footerW/2,bottom+29*u+offset,footerW/2,7,ink,nil,1)
-        ui.trackControl("film",fields.film,ink,gold)
-        ui.trackControl("ratio",fields.ratio,ink,gold)
-        local cellW = footerW/#actions
-        for i, item in ipairs(actions) do
-            shortcut(item[1],item[2],item[3],footerX+(i-1)*cellW,bottom+37*u+offset,cellW,ink,item[4],1)
-        end
     end
-    function ui.setFormat(stock)
+    function ui.setFormat(stock,multiplier)
         local ratio = string.format("%d:%d",rect.columns,rect.rows)
-        set("film",rect.sideControls and stock or ("FILM ["..filmKey.."]  "..stock))
-        set("ratio",rect.sideControls and ratio or ("ASPECT ["..ratioKey.."]  "..ratio))
+        set("film",stock)
+        set("ratio",ratio)
+        set("blur",string.format("%gx",multiplier or 1))
     end
 
     local dial, secondDial

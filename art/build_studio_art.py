@@ -203,7 +203,7 @@ def objects():
                         + box(0, -.18, -.06, 1.62, .19, .81, (225, 162, 82)))
     for i in range(5):
         models[f"subject{i+1}"] = subject(i)
-    for i, aspect in enumerate((3/2, 4/3, 1, 16/9, 5/4), 1):
+    for i, aspect in enumerate((3/2, 4/3, 1, 16/9, 5/4, 21/9, 65/24), 1):
         models[f"frame{i}"] = frame(aspect)
         if aspect != 1:
             models[f"frame{i}p"] = frame(1/aspect)

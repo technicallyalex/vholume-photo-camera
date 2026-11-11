@@ -9,7 +9,7 @@ local exposure = {
     isos = {100,125,160,200,250,320,400,500,640,800,1000,1250,1600,2000,2500,3200,4000,5000,6400},
     mode = 1, aperture = 7, shutter = 22 + extendedShutterSteps, iso = 1,
     auto = false, minISO = 1, maxISO = 13, minShutter = 19 + extendedShutterSteps,
-    grid = false, dofBoost = 1, dofStrengths = {1,2,4},
+    grid = false, dofBoost = 1, dofStrengths = {1,2,4,8},
     -- VHOLUME's baked lighting uses game-relative HDR values. Map those
     -- values to camera EV without changing the size of an exposure stop.
     sceneCalibrationEV = 10,
@@ -82,9 +82,7 @@ function exposure.speedText(speed)
 end
 
 function exposure.help(config, action, mode)
-    if action == "dofBoost" then
-        return "Strengthens lens blur at the selected aperture."
-    elseif action == "auto" then
+    if action == "auto" then
         return config.mode == 1 and "Auto ISO is inactive in Game mode."
             or "Adjusts ISO within your selected limits."
     elseif action == "minISO" then return "Lowest sensitivity allowed for Auto ISO."

@@ -1,6 +1,6 @@
 # VHOLUME Photo Camera Optical Finder Preview
 
-**Version 1.1.0-alpha.8** · Windows · Separate preview build
+**Version 1.1.0-alpha.9** · Windows · Separate preview build
 
 ## Install and switch back
 
@@ -12,13 +12,15 @@ To switch back, close the game, move the current **VHOLUMEPhotoCamera** folder o
 
 ## Optical finder
 
-The raised finder leaves room for the camera readouts. At 1920 × 1080, the 3:2 frame is 1380 × 920 pixels. A thin exposure scale is centered above the image with an amber pointer. The recessed LCD shows mode, shutter, aperture, ISO, and lens, with segmented numerals and shaded glass. Focus lamps sit at the bottom-left beside the LCD. Focus controls sit on the right or below the LCD on narrower screens. Aspect and film readouts move below the image when the side margins are narrow.
+The raised finder reserves space on both sides for camera readouts, including at 16:9. At 1920 × 1080, the 3:2 frame is 1380 × 920 pixels and the 16:9 frame is 1440 × 810 pixels. A thin exposure scale is centered above the image with an amber pointer. The recessed LCD shows mode, shutter, aperture, ISO, and lens, with segmented numerals and shaded glass. Focus lamps sit at the bottom-left beside the LCD. Film and aspect information stay in the left sidebar; focus distance, subject distance, focus controls, and the lens blur multiplier stay in the matching right sidebar. Small muted labels sit above larger values, with controls grouped separately.
 
 Shortcuts appear directly in the labels for their settings and switch with the active input device. Keyboard labels reflect customized bindings. Hold a wheel modifier or controller shoulder button to highlight the settings it adjusts. Photo Studio’s Frame card offers the new Optical reticle alongside Square, Circle, and None.
 
 Toggle the rule-of-thirds guide using **Frame → Thirds Grid** in Photo Studio. In Studio, **LB / RB** move controller focus between buttons and **A** activates the focused button.
 
-Under **Exposure → Edit Exposure**, select **Depth of field strength** for natural **1x**, stronger **2x**, or exaggerated **4x** lens blur. The selected aperture still determines exposure. The strength option changes the rendering aperture used for blur. Grid and DOF strength choices save with the preview settings.
+Under **Lens → DOF Multiplier**, select **1x**, **2x**, **4x**, or **8x** to exaggerate out-of-focus lens blur. **1x** preserves the baseline. Higher multipliers widen the rendering aperture and allow larger blur kernels while keeping the displayed aperture, exposure, and focus distance unchanged. DOF must be enabled for the multiplier to take effect. The choice saves with the preview settings and works in every exposure mode.
+
+The Frame card offers **21:9 Ultrawide** and **65:24 Panoramic** alongside the existing formats, with matching rotating frame models. Both can rotate into portrait orientation. Captures preserve the selected ratio; wider ratios have shorter frames so the sidebars remain beside the image. The HUD is excluded from saved photos.
 
 ## Screenshot folder
 
@@ -69,7 +71,7 @@ The wheel chords apply with the finder raised. Change the four letter-key modifi
 
 A dedicated Enhanced Input context gives camera controls priority while the finder is raised. Movement and mouse-look mappings remain available, including movement remaps. The camera context is removed when the finder lowers, Studio or a game menu opens, the camera is stowed, or the level changes. Held camera keys must be released before their game actions can resume.
 
-**Ctrl** continues to reach the game for sliding while the finder is raised. **Ctrl + wheel** also adjusts aperture. Alpha.8 reduces the large LCD values and adds padding around the readouts.
+**Ctrl** continues to reach the game for sliding while the finder is raised. **Ctrl + wheel** also adjusts aperture. LCD values keep padding around their edges and shrink to fit narrow portrait frames.
 
 ## Controller
 
@@ -100,3 +102,5 @@ Alpha.3 saved sharp stationary and blurred panning photos at one second, a two-s
 Alpha.7 native checks confirmed that the camera input context removes the game's restart and raise-hands bindings while preserving movement and look mappings, then restores the original mappings on removal. The revised finder and rotating Exposure model were also constructed and captured in the running game. Offline checks covered keybind migration, editable wheel modifiers, duplicate rejection, 120 finder layouts, and the expanded keybind menu.
 
 Alpha.8 native checks confirmed that Left Ctrl remains mapped to the game's crouch/slide action while camera input priority is active, with movement/look mappings preserved and original mappings restored on removal. The padded LCD values were captured in-game with Game mode and a 600 mm lens.
+
+Alpha.9 native checks constructed and captured the 16:9, 21:9, and 65:24 finder layouts and the Lens card's DOF multiplier control. Saved panoramic photos measured 1428 × 612 and 1430 × 528 pixels at a 1920 × 1080 viewport, preserving both ratios exactly. A fixed-camera comparison confirmed stronger blur at 8x than 1x, with rendering apertures f/0.5 and f/4.0 for a displayed f/4.0 setting. Offline checks covered 84 landscape and portrait layouts, even crop dimensions, sidebar bounds, multiplier changes, unchanged exposure/focus values, option compatibility, and safe restoration of renderer settings. Physical controller hardware was not used for this pass.

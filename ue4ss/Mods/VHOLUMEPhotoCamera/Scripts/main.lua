@@ -144,14 +144,7 @@ local function updateFocusLabels(active)
     if not active.raised or not ui or not valid(ui.widget) then return end
     local focus, subject = optics.readout(active)
     ui.setExposure(exposure.modes[exposure.mode][1],active.exposure,exposure.speedText(active.exposure.speed))
-    if ui.focusText ~= focus then
-        ui.focus:SetText(FText(focus))
-        ui.focusText = focus
-    end
-    if ui.subjectText ~= subject then
-        ui.subject:SetText(FText(subject))
-        ui.subjectText = subject
-    end
+    ui.setFocusDetails(focus,subject)
     ui.setFocusIndicator(optics.focusIndicator(active))
     ui.setControlActive("dof", optics.enabled)
     ui.setControlActive("mode", optics.manual)
@@ -160,11 +153,12 @@ end
 local function updateLabels(active, message)
     local ui = active.ui
     if not ui or not valid(ui.widget) then return end
-    ui.lens:SetText(FText(string.format("%d mm",lenses[lensIndex])))
+    local lens = string.format("%d mm",lenses[lensIndex])
+    if active.raised then ui.setLens(lens) else ui.lens:SetText(FText(lens)) end
     ui.setControlActive("walk", slow)
     if active.raised then
         ui.setFrameNumber(shotNumber+1)
-        ui.setFormat(film.stocks[settings.stock][1])
+        ui.setFormat(film.stocks[settings.stock][1],exposure.dofStrengths[exposure.dofBoost])
         updateFocusLabels(active)
     else
         local format = active.rect.portrait and "PORTRAIT" or "LANDSCAPE"
@@ -380,12 +374,12 @@ local function refreshStudio(active)
     local portrait = active.portrait
     if portrait == nil then portrait = active.rect.portrait end
     local x,y = film.ratio(settings.frame,portrait)
-    local orientation = x == y and "Square frame" or (portrait and "Portrait frame" or "Landscape frame")
+    local orientation = x == y and "Square frame" or (portrait and "Portrait" or "Landscape")
     active.studio.update(active.studioCard,{
         photos={"Photo output",photos.caption(),"folder"},
         lens={string.format("%d mm",lenses[lensIndex]),"Focal length","lens"..lenses[lensIndex],binds.aimScaling()},
         film={stock[1],stock[3],stock[2]},
-        frame={frame[1].."  "..x..":"..y,orientation,
+        frame={x..":"..y,x==y and orientation or frame[1].." / "..orientation,
             "frame"..settings.frame..(portrait and x~=y and "p" or "")},
         subjects={subjects.poses[settings.pose][1],"Robert","subject"..settings.pose},
     },portrait,x==y,reticles[settings.reticle],exposure,active.controller)
@@ -922,7 +916,7 @@ local function studioExposure(active, target, pressed)
         exposure.mode = target.step
     elseif item == "auto" and target then
         exposure.auto = not exposure.auto
-    elseif item == "minISO" or item == "maxISO" or item == "minShutter" or item == "dofBoost" then
+    elseif item == "minISO" or item == "maxISO" or item == "minShutter" then
         if not exposure.step(item,step) then return end
     else
         return
@@ -1075,6 +1069,15 @@ local function studioTick(active, now, tab)
         return
     end
     if pad.pressed.b then closeOptions(active); return end
+    if target and target.action == "dofBoost" then
+        if pending then active.studio.notice("Wait for the photo to finish saving."); return end
+        active.studioCard = lensCard
+        exposure.step("dofBoost",target.step)
+        updateExposure(active,true)
+        refreshStudio(active)
+        if not binds.persist() then active.studio.notice("Could not save DOF multiplier.") end
+        return
+    end
     if target and target.action == "aimScaling" then
         active.studioCard = lensCard
         local saved = binds.setAimScaling(not binds.aimScaling())
@@ -1458,4 +1461,4 @@ else
     LoopInGameThreadWithDelay(1, tick)
 end
 
-log("Optical Finder Preview 1.1.0-alpha.8 ready. Press 5, F9, or controller View to equip.")
+log("Optical Finder Preview 1.1.0-alpha.9 ready. Press 5, F9, or controller View to equip.")

@@ -7,8 +7,8 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
     local wide = w >= h
     local columns = wide and #cards or 3
     local rows = math.ceil(#cards / columns)
-    local unit = math.min(w / (wide and 1180 or 620), h / (wide and 460 or 665))
-    local tileW, tileH, gap = 178*unit, 249*unit, 9*unit
+    local unit = math.min(w / (wide and 1180 or 620), h / (wide and 460 or 700))
+    local tileW, tileH, gap = 178*unit, 262*unit, 9*unit
     local panelW = columns*tileW + (columns-1)*gap + 26*unit
     local panelH = rows*tileH + (rows-1)*gap + 136*unit
     local x, y = (w-panelW)/2, (h-panelH)/2
@@ -224,7 +224,7 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
     end
 
     if exposurePage then
-        local pw, ph = (wide and 960 or 580)*unit, (wide and 374 or 524)*unit
+        local pw, ph = (wide and 960 or 580)*unit, (wide and 340 or 490)*unit
         local left, top = (w-pw)/2, (h-ph)/2
         local innerX, innerW = left+13*unit, pw-26*unit
         block(left,top,pw,ph,color(.025,.038,.032,.98))
@@ -235,7 +235,7 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
         local column = wide and (innerW-16*unit)/2 or innerW
         local isoX = wide and innerX+column+16*unit or innerX
         label(innerX,modesY,column,18*unit,10,"EXPOSURE MODE",gold)
-        label(isoX,isoY,column,18*unit,10,"SENSITIVITY / OPTICS",gold)
+        label(isoX,isoY,column,18*unit,10,"SENSITIVITY",gold)
         local rows, markers, values = {}, {}, {}
         local descriptions = {"Game controls brightness", "You set aperture and shutter",
             "You set aperture", "You set shutter speed"}
@@ -249,8 +249,7 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
             rows[#rows+1] = target
         end
         local names = {{"auto","Auto ISO"}, {"minISO","Minimum ISO"},
-            {"maxISO","Maximum ISO"}, {"minShutter","Minimum shutter in A"},
-            {"dofBoost","Depth of field strength"}}
+            {"maxISO","Maximum ISO"}, {"minShutter","Minimum shutter in A"}}
         for i, row in ipairs(names) do
             local id, title = row[1], row[2]
             local py = isoY+(21+(i-1)*34)*unit
@@ -268,7 +267,7 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
                 rows[#rows+1] = target
             end
         end
-        local infoY = isoY+195*unit
+        local infoY = isoY+161*unit
         local info = label(isoX,infoY,column,18*unit,9,"",quiet)
         local currentConfig
         updateContext = function()
@@ -292,7 +291,6 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
             values.minISO:SetText(FText(tostring(config.isos[config.minISO])))
             values.maxISO:SetText(FText(tostring(config.isos[config.maxISO])))
             values.minShutter:SetText(FText(config.speedText(config.speeds[config.minShutter])))
-            values.dofBoost:SetText(FText(config.dofStrengths[config.dofBoost].."x"))
             updateContext()
             hint:SetText(FText(controller and "D-PAD   Navigate / adjust       A   Select       B   Back"
                 or "ARROWS   Navigate / adjust       ENTER   Select       TAB   Next control"))
@@ -359,22 +357,24 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
         local innerX, innerW = px+9*unit,tileW-18*unit
         if card == "photos" then
             tile.value = label(innerX,py+110*unit,innerW,20*unit,14,"",ink,true)
-            tile.detail = label(innerX,py+134*unit,innerW,17*unit,10,"",quiet,true)
+            tile.detail = label(innerX,py+134*unit,innerW,17*unit,8.5,"",quiet,true)
             button(innerX,py+156*unit,innerW,21*unit,"OPEN FOLDER","select",i,nil,nil,"photos")
             button(innerX,py+181*unit,innerW,21*unit,"CHOOSE FOLDER","choosePhotos",i,nil,nil,"photos")
             button(innerX,py+205*unit,innerW,12*unit,"USE DEFAULT","resetPhotos",i,nil,7)
         elseif card == "exposure" then
             tile.value = label(innerX,py+110*unit,innerW,20*unit,13,"",ink,true)
-            tile.detail = label(innerX,py+134*unit,innerW,17*unit,10,"",quiet,true)
+            tile.detail = label(innerX,py+134*unit,innerW,17*unit,8.5,"",quiet,true)
             button(innerX,py+156*unit,innerW,21*unit,"EDIT EXPOSURE","exposureOpen",i)
         else
-            tile.value = stepper(innerX,py+108*unit,innerW,card == "film" and 8.6 or 11,"step",i)
-            tile.detail = label(innerX,py+135*unit,innerW,18*unit,card == "film" and 9 or 10,"",quiet,true)
+            tile.value = stepper(innerX,py+108*unit,innerW,card == "film" and 9.5 or card == "subjects" and 12 or 14,"step",i)
+            tile.detail = label(innerX,py+135*unit,innerW,18*unit,8.5,"",quiet,true)
             if card == "lens" then
                 ui.addControlRow(px+tileW/2,py+160*unit,innerW,{
                     {"lens",0,"Change lens",binds.token("lensPrev"),binds.token("lensNext")},
                 },nil,false,.85)
                 tile.scaling = button(innerX,py+189*unit,innerW,22*unit,"","aimScaling",i)
+                label(innerX,py+216*unit,innerW,12*unit,8,"DOF MULTIPLIER",quiet)
+                tile.dofMultiplier = stepper(innerX,py+231*unit,innerW,11,"dofBoost",i)
             elseif card == "film" then
                 label(innerX,py+159*unit,innerW,15*unit,9,"Grain follows ISO",quiet,true)
             elseif card == "frame" then
@@ -434,6 +434,7 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
         tiles.frame.reticle:SetText(FText(reticle))
         tiles.frame.grid:SetText(FText(config.grid and "THIRDS GRID ON" or "THIRDS GRID OFF"))
         tiles.lens.scaling:SetText(FText(content.lens[4] and "AIM SCALING ON" or "AIM SCALING OFF"))
+        tiles.lens.dofMultiplier:SetText(FText(config.dofStrengths[config.dofBoost].."x"))
     end
     function ui.tick(now)
         local frame = math.floor(now*10)
