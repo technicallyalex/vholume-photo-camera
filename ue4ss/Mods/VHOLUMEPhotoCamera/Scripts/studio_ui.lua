@@ -280,7 +280,7 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
         local footerY = top+ph-68*unit
         button(innerX,footerY,132*unit,24*unit,"BACK TO STUDIO","exposureBack",nil,nil,nil,"back")
         button(innerX+innerW-134*unit,footerY,134*unit,24*unit,
-            raised and "LOWER VIEWFINDER" or "RAISE VIEWFINDER","finder",nil,nil,nil,"finder")
+            "OPEN VIEWFINDER","finder",nil,nil,nil,"finder")
         local notice = label(innerX,footerY+25*unit,innerW,16*unit,9,"",gold)
         local hint = label(innerX,footerY+43*unit,innerW,16*unit,9,"",quiet)
         function ui.notice(value) notice:SetText(FText(value)) end
@@ -318,14 +318,18 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
     local notice = label(innerX,footerY-16*unit,innerW,16*unit,10,"",gold)
     local keyboardHints = add("CanvasPanel",innerX,footerY+29*unit,innerW,36*unit)
     local controllerHints = add("CanvasPanel",innerX,footerY+29*unit,innerW,36*unit)
-    ui.addControlRow(0,0,innerW,{
+    local navigation = {
         {"cards",0,"Card",binds.token("menuLeft"),binds.token("menuRight")},
         {"values",0,"Change",binds.token("menuNext"),binds.token("menuPrev")},
-        {"use",0,"Card action",binds.token("menuSelect")},
-    },keyboardHints,true,.86)
+    }
+    if binds.name("menuSelect") ~= "Enter" then
+        navigation[#navigation+1] = {"use",0,"Card action",binds.token("menuSelect")}
+    end
+    ui.addControlRow(0,0,innerW,navigation,keyboardHints,true,.86)
     ui.addControlRow(0,18*unit,innerW,{
-        {"tab",0,"Focus",binds.tabHint()}, {"enter",0,"Activate","Enter"},
+        {"tab",0,"Focus",binds.tabHint()}, {"enter",0,"Select","Enter"},
         {"studio",0,"Back",binds.token("studio")},
+        {"finder",0,"Viewfinder",binds.token("finder")},
     },keyboardHints,true,.86)
     ui.addControlRow(0,0,innerW,{
         {"padCards",0,"Card","←","→"}, {"padValues",0,"Change","↑","↓"},
@@ -397,7 +401,7 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
     button(innerX,footerY,backW,24*unit,"BACK TO CAMERA","close",nil,nil,nil,"back")
     button(innerX+backW+footerGap,footerY,keyW,24*unit,"KEYBINDS","keybinds",nil,nil,nil,"keybinds")
     button(innerX+innerW-finderW,footerY,finderW,24*unit,
-        raised and "LOWER VIEWFINDER" or "RAISE VIEWFINDER","finder",nil,nil,nil,"finder")
+        "OPEN VIEWFINDER","finder",nil,nil,nil,"finder")
 
     local function drawFrame(tile, cell)
         ue.call(widgetPath.."SetRenderTranslation",tile.image,

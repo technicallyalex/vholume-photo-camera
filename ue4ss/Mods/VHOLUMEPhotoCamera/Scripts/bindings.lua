@@ -2,8 +2,8 @@ return function(ue, log, exposure)
     local binds = {}
     binds.groups = {
         {"Camera",
-            {"equip","Equip / stow","Five"},
-            {"studio","Open / close Photo Studio","Four"}, {"finder","Raise / lower finder","RightMouseButton"},
+            {"equip","Toggle camera mode","Five"},
+            {"studio","Open / close Photo Studio","Six"}, {"finder","Raise / lower finder","RightMouseButton"},
             {"shoot","Shutter / place subject","LeftMouseButton"},
             {"lensPrev","Previous lens","LeftBracket"}, {"lensNext","Next lens","RightBracket"},
             {"walk","Toggle slow walk","V"}, {"frame","Rotate frame","P"}},
@@ -20,7 +20,7 @@ return function(ue, log, exposure)
         {"Studio",
             {"menuLeft","Previous card","Left"}, {"menuRight","Next card","Right"},
             {"menuNext","Next value","Up"}, {"menuPrev","Previous value","Down"},
-            {"menuSelect","Use selected card","Six"}},
+            {"menuSelect","Use selected card","Enter"}},
         {"Wheel",
             {"dialLens","Lens wheel modifier","R"}, {"dialFilm","Film wheel modifier","T"},
             {"dialRatio","Aspect ratio wheel modifier","Y"}, {"dialMode","Exposure mode wheel modifier","U"}},
@@ -48,7 +48,7 @@ return function(ue, log, exposure)
     local modifiers = {
         LeftShift=true,RightShift=true,LeftControl=true,RightControl=true,LeftAlt=true,RightAlt=true,
     }
-    local reserved = { F9=true,Enter=true,Tab=true,W=true,A=true,S=true,D=true,SpaceBar=true }
+    local reserved = { Enter=true,Tab=true,W=true,A=true,S=true,D=true,SpaceBar=true }
     local wheelActions = {lens="dialLens",film="dialFilm",ratio="dialRatio",mode="dialMode"}
     local choices, allowed, keys = {}, {}, {}
     local function add(name)
@@ -126,7 +126,7 @@ return function(ue, log, exposure)
     end
 
     local function permitted(id, name)
-        if not allowed[name] or reserved[name] then return false end
+        if not allowed[name] or (reserved[name] and not (id == "menuSelect" and name == "Enter")) then return false end
         if name == "LeftMouseButton" and id ~= "shoot" then return false end
         if id == "fine" then return name == "LeftShift" or name == "RightShift" end
         if id:sub(1,4) == "dial" and name:find("MouseScroll",1,true) then return false end
@@ -145,31 +145,34 @@ return function(ue, log, exposure)
         end
     end
 
+    local save
     function binds.load(saved)
         if path then return end
         local stable = saved:gsub("[/\\]+$","").."/VHOLUMEPhotoCamera.keys"
         local previous = stable..".finder-preview"
-        path = stable..".input-preview"
+        path = stable..".controls-preview"
         local file = io.open(path,"rb") or io.open(path..".bak","rb")
+        local fresh = file == nil
+        file = file or io.open(stable..".input-preview","rb") or io.open(stable..".input-preview.bak","rb")
             or io.open(previous,"rb") or io.open(previous..".bak","rb")
             or io.open(stable..".exposure-preview","rb") or io.open(stable..".exposure-preview.bak","rb")
             or io.open(stable,"rb") or io.open(stable..".bak","rb")
-        if not file then return end
+        if not file then
+            if not save(current,aimScaling) then log("Could not save default keybinds.") end
+            return
+        end
         local body = file:read(8193)
         file:close()
         if not body or #body > 8192 then return end
         exposure.loadOptions("\n"..body.."\n")
-        local loaded, legacy = {}, false
+        local loaded = {}
         for id,name in body:gmatch("([%a]+)=([%w]+)") do
             if actions[id] and permitted(id,name) then loaded[id] = name end
-            if id == "stow" then legacy = true end
             if id == "aimScaling" and (name == "0" or name == "1") then aimScaling = name == "1" end
         end
-        if legacy then
-            for id,name in pairs(loaded) do
-                if id ~= "studio" and name == "Four" then loaded[id] = loaded.studio end
-            end
-            loaded.studio = "Four"
+        if fresh then
+            if not save(current,aimScaling) then log("Could not save default keybinds.") end
+            return
         end
         local used = {}
         for _,id in ipairs(order) do
@@ -193,7 +196,7 @@ return function(ue, log, exposure)
         use(loaded)
     end
 
-    local function save(updated, scaling)
+    save = function(updated, scaling)
         if not path then return false end
         local temp, backup = path..".tmp", path..".bak"
         local file = io.open(temp,"wb")

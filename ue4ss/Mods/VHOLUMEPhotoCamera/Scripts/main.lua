@@ -489,7 +489,7 @@ local function requestStow()
     state.stowAt = gameplay():GetRealTimeSeconds(state.pc) + .23
 end
 
-local function equip(pc, pawn, controller)
+local function equip(pc, pawn, controller, openStudio)
     if state then requestStow(); return end
     if not valid(pawn) then
         log("Camera needs a possessed player pawn.")
@@ -517,7 +517,7 @@ local function equip(pc, pawn, controller)
     rebuildOverlay(state, gate(pc))
     updateWalk(state)
     present(state, "equip")
-    showStudio(state)
+    if openStudio then showStudio(state) end
     log("Equipped at " .. lenses[lensIndex] .. " mm.")
 end
 
@@ -812,7 +812,7 @@ local function binding(id, action)
     return { id=id, action=action }
 end
 
-local equipBindings = { binding("equip"), { key=binds.raw("F9") } }
+local equipBindings = { binding("equip") }
 local studioKey = binding("studio")
 local placementKey = binding("placeStart")
 local tabKey = { key=binds.raw("Tab") }
@@ -868,6 +868,11 @@ local function closeOptions(active)
     rebuildOverlay(active,gate(active.pc,active.portrait))
     for _, input in ipairs(cameraBindings) do justPressed(input,active.pc) end
     for _, input in ipairs(placementBindings) do justPressed(input,active.pc) end
+end
+
+local function openViewfinder(active)
+    closeOptions(active)
+    if not active.raised then raiseOrLower() end
 end
 
 local function startPlacement(active)
@@ -1017,6 +1022,10 @@ local function studioTick(active, now, tab)
     end
     local focused = active.studio.focused()
     if not pressed.click and pressed.enter then target = focused end
+    if pressed.finder and not active.keyCapture then
+        openViewfinder(active)
+        return
+    end
     if active.keyPage then
         if pad.pressed.b then
             if active.keyCapture then
@@ -1059,9 +1068,8 @@ local function studioTick(active, now, tab)
         closeOptions(active)
         return
     end
-    if pressed.finder or (target and target.action == "finder") then
-        closeOptions(active)
-        raiseOrLower()
+    if target and target.action == "finder" then
+        openViewfinder(active)
         return
     end
     if active.exposurePage then
@@ -1277,7 +1285,9 @@ local function tick()
         for _, input in ipairs(equipBindings) do
             if justPressed(input, pc) then toggle, padEquip = true, false end
         end
-        if not state and not toggle then return end
+        local keyboardOptions = justPressed(studioKey,pc)
+        local options = keyboardOptions or (pad.pressed.y and (state and state.studio or not pad.layer()))
+        if not state and not toggle and not options then return end
         local menuOpen = stockMenuOpen(pc)
         if not state and menuOpen then return end
 
@@ -1290,8 +1300,6 @@ local function tick()
             stow()
             return
         end
-        local keyboardOptions = justPressed(studioKey,pc)
-        local options = keyboardOptions or (pad.pressed.y and (state and state.studio or not pad.layer()))
         local place = justPressed(placementKey,pc)
         if menuOpen and state then abortMotion(state,"EXPOSURE CANCELLED") end
         if state and menuOpen ~= state.menuOpen then
@@ -1380,12 +1388,17 @@ local function tick()
             end
         end
         if toggle then
-            equip(pc, pawn, padEquip)
+            equip(pc, pawn, padEquip, padEquip)
             for _, input in ipairs(cameraBindings) do
                 input.pressed = false
                 if state then justPressed(input, pc) end
             end
             if padEquip then return end
+        end
+        if options and not state then
+            equip(pc,pawn,not keyboardOptions,true)
+            for _, input in pairs(studioInputs) do justPressed(input,pc) end
+            return
         end
         local active = state
         if not active then return end
@@ -1461,4 +1474,4 @@ else
     LoopInGameThreadWithDelay(1, tick)
 end
 
-log("Photo Camera 1.0.2 ready. Press 5, F9, or controller View to equip.")
+log("Photo Camera 1.0.3-alpha.1 ready. Press 5 for camera mode or 6 for Studio.")

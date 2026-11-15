@@ -1,6 +1,6 @@
 # VHOLUME Photo Camera Guide
 
-**Version 1.0.2** / Windows
+**Version 1.0.3-alpha.1** / Windows controls preview
 
 A complete camera controls overhaul introduces a dedicated controller layout and controls using modifier keys and the scroll wheel for focus, exposure, lenses, film looks, and framing. Shortcuts appear beside their settings in the viewfinder. See [Keyboard and mouse](#keyboard-and-mouse) and [Controller](#controller) for the layouts.
 
@@ -10,7 +10,7 @@ Close VHOLUME. Extract the installer ZIP and run **Install Photo Camera.cmd**. I
 
 For a manual install, back up the existing mod outside **Mods**. Copy **VHOLUMEPhotoCamera** from the manual ZIP's **ue4ss\Mods** into the game's **VHOLUME\Binaries\Win64\ue4ss\Mods**. This update replaces the existing Photo Camera mod.
 
-To switch back, close the game, move the current **VHOLUMEPhotoCamera** folder out of **Mods**, then move the dated backup into **Mods** and rename it **VHOLUMEPhotoCamera**. You can also reinstall any earlier build from its ZIP. This version saves keybinds and options in **VHOLUMEPhotoCamera.keys.input-preview** and imports compatible settings from earlier previews or the stable build on first use.
+To switch back, close the game, move the current **VHOLUMEPhotoCamera** folder out of **Mods**, then move the dated backup into **Mods** and rename it **VHOLUMEPhotoCamera**. You can also reinstall any earlier build from its ZIP. This preview saves bindings in **VHOLUMEPhotoCamera.keys.controls-preview**. On first use it restores every keybind to its default while retaining exposure options and aim-scaling preferences. Previous binding profiles remain available for switching back. Later changes made in Keybinds save normally.
 
 ## Optical finder
 
@@ -32,7 +32,7 @@ The Exposure card has a rotating low-poly +/- model. The exposure settings show 
 
 ## Exposure
 
-Press **5** or **controller View** to equip the camera and open Photo Studio. Select **Exposure > Edit Exposure**.
+Press **5** for camera mode or **6** for Photo Studio. **6** can open Studio even when the camera is stowed. Controller **View** retains its existing Studio entry. Select **Exposure > Edit Exposure** to change exposure settings.
 
 | Mode | You set | The camera sets |
 | --- | --- | --- |
@@ -55,7 +55,7 @@ Motion captures keep the selected aspect ratio and use up to 3840 pixels along t
 
 ## Keyboard and mouse
 
-Right-click raises or lowers the finder. Left-click takes a photo. Middle-click runs single-shot autofocus. **F** switches AF/MF. **4** opens Studio or goes back one level. The regular camera shortcuts remain available.
+**5** toggles camera mode without opening Studio. **6** opens Studio or goes back one level. Right-click raises or lowers the finder while using the camera; from Studio it always opens the finder, including when Studio was opened from the raised finder. Left-click takes a photo. Middle-click runs single-shot autofocus. **F** switches AF/MF. **Enter** selects the focused Studio control or uses the selected card. The regular camera shortcuts remain available.
 
 | Hold while scrolling | Adjust |
 | --- | --- |

@@ -1,5 +1,7 @@
 # VHOLUME Photo Camera
 
+**Local controls preview v1.0.3-alpha.1:** 5 toggles camera mode, 6 opens Studio, and right-click opens the viewfinder from either. Studio selection uses Enter. The preview starts with all keybinds at their defaults and keeps the previous profile for rollback. The public downloads below remain v1.0.2.
+
 A photo mode for VHOLUME with a 35 mm viewfinder, eight lenses, film looks, manual focus, and exposure controls. Separate packages are available for Windows and Linux through Proton.
 
 **New in v1.0.2: a complete camera controls overhaul.** A dedicated controller layout and controls using modifier keys and the scroll wheel put the camera's core functions at your fingertips, with shortcuts shown beside each viewfinder setting. The update also adds exposure modes, Auto ISO, motion captures, and a redesigned optical viewfinder. [Full controls guide](GUIDE.md)
@@ -17,7 +19,7 @@ A photo mode for VHOLUME with a 35 mm viewfinder, eight lenses, film looks, manu
 
 1. Close VHOLUME and extract the installer ZIP.
 2. Double-click **Install Photo Camera.cmd**. It finds the Steam installation and uses the bundled UE4SS build if needed. If prompted, paste the folder from Steam's **Browse local files** action.
-3. Start the game, enter a level, and press **5** or **controller View** to open Photo Studio. **Right-click / LT** raises or lowers the finder. **Left-click / RT** takes a photo with the finder raised.
+3. Start the game, enter a level, and press **5** for camera mode or **6** for Photo Studio. Controller **View** opens Studio. **Right-click / LT** raises the finder from either mode. **Left-click / RT** takes a photo with the finder raised.
 
 For a manual install, install UE4SS in `VHOLUME\Binaries\Win64` inside the game's Steam installation folder. Copy `VHOLUMEPhotoCamera` from the manual ZIP's `ue4ss\Mods` into the game's `VHOLUME\Binaries\Win64\ue4ss\Mods` folder. [UE4SS installation guide](https://docs.ue4ss.com/dev/installation-guide.html)
 

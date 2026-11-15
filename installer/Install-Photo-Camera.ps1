@@ -6,7 +6,7 @@ $modName = 'VHOLUMEPhotoCamera'
 $exeName = 'VHOLUME-Win64-Shipping.exe'
 $modZip = Join-Path $PSScriptRoot 'VHOLUME-Photo-Camera.zip'
 $loaderZip = Join-Path $PSScriptRoot 'UE4SS_v3.0.1-1011-gb50986bd.zip'
-$modHash = 'BB4A7B07B0A287E5CBC6830CDC36F2AE3140370E5662B3ED21A7D2745D0E6F1F'
+$modHash = 'BA3F3B5A421248DD36E4803A3EFCC72ECE25B2980176D334F2926B91386C65A3'
 $loaderHash = 'AA181789DC7226BCEC94F13F054FF10477D7383321FFB98DBC3666A159B182A8'
 $loaderDllHash = '2AD348BF2025BD26B2AA63B478D9813AFBD4E656C9BCFB3FDF6752C4D285F298'
 
@@ -105,7 +105,7 @@ function Install-PhotoCamera([string]$bin) {
             (Test-Path -LiteralPath (Join-Path $bin 'UE4SS.dll')) -or (Test-Path -LiteralPath (Join-Path $bin 'xinput1_3.dll')))) {
         throw "Found a partial or custom UE4SS installation in $bin. Use the manual install steps for this setup."
     }
-    Write-Host "Installing Photo Camera 1.0.2 in $bin"
+    Write-Host "Installing Photo Camera 1.0.3-alpha.1 in $bin"
     if ($existingLoader) {
         Write-Host 'Using your existing UE4SS installation.'
         if ((Get-FileHash -LiteralPath $core).Hash -ne $loaderDllHash) {
@@ -162,7 +162,7 @@ function Install-PhotoCamera([string]$bin) {
     }
 
     if ($movedOld) { Write-Host "Previous Photo Camera backed up to $backup" }
-    Write-Host 'Installed. Start VHOLUME, enter a level, and press 5 to open Photo Studio.'
+    Write-Host 'Installed. Start VHOLUME and enter a level. Press 5 for camera mode or 6 for Photo Studio.'
 }
 $mutex = [Threading.Mutex]::new($false, 'Local\VHOLUMEPhotoCameraInstaller')
 $ownsMutex = $false

@@ -30,13 +30,15 @@ def main():
     parser.add_argument('--loader-bundle', type=Path, required=True,
                         help='An existing installer ZIP containing the tested UE4SS archive')
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--version', default='1.0.2', help='Expected camera version banner')
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     mod = root / 'ue4ss/Mods/VHOLUMEPhotoCamera'
     files = sorted(p for p in mod.rglob('*') if p.is_file())
     assert len(files) == 102, 'Unexpected release payload'
     assert not any(p.is_symlink() or p.suffix.lower() not in ('.lua', '.png', '.mp4', '.ps1', '.txt') for p in files)
-    assert 'Photo Camera 1.0.2 ready' in (mod / 'Scripts/main.lua').read_text(encoding='utf-8')
+    assert re.fullmatch(r'\d+\.\d+\.\d+(?:-[A-Za-z0-9.]+)?', args.version)
+    assert ('Photo Camera ' + args.version + ' ready') in (mod / 'Scripts/main.lua').read_text(encoding='utf-8')
     args.output.mkdir(parents=True, exist_ok=True)
     entries = {p.relative_to(root).as_posix(): p.read_bytes() for p in files}
     entries['README.md'] = (root / 'GUIDE.md').read_bytes()
@@ -45,6 +47,7 @@ def main():
 
     script_path = root / 'installer/Install-Photo-Camera.ps1'
     script = script_path.read_text(encoding='utf-8-sig')
+    script = script.replace('Installing Photo Camera 1.0.2 in', 'Installing Photo Camera ' + args.version + ' in')
     script, count = re.subn(r"(?m)^\$modHash = '[A-Fa-f0-9]{64}'",
                             lambda _: "$modHash = '" + digest(manual.read_bytes()) + "'", script)
     assert count == 1
