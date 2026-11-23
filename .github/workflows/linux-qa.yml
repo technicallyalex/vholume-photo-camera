@@ -2,7 +2,7 @@ name: Linux package QA
 
 on:
   push:
-    branches: ["linux/**", "preview/capture-*"]
+    branches: ["main", "linux/**", "preview/capture-*"]
   workflow_dispatch:
 
 permissions:

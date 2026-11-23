@@ -1,16 +1,18 @@
 # VHOLUME Photo Camera Guide
 
-**Version 1.0.3-rc.2** / Windows and Linux release candidate
+**Version 1.1.0** / Windows and Linux / Proton
 
 A complete camera controls overhaul introduces a dedicated controller layout and controls using modifier keys and the scroll wheel for focus, exposure, lenses, film looks, and framing. Shortcuts appear beside their settings in the viewfinder. See [Keyboard and mouse](#keyboard-and-mouse) and [Controller](#controller) for the layouts.
 
 ## Install and switch back
 
-Close VHOLUME. Extract the installer ZIP and run **Install Photo Camera.cmd**. It detects the Steam installation and moves any existing Photo Camera folder into a dated backup next to the UE4SS Mods folder.
+On Windows, close VHOLUME. Extract the installer ZIP and run **Install Photo Camera.cmd**. It detects the Steam installation and moves any existing Photo Camera folder into a dated backup next to the UE4SS Mods folder.
 
 For a manual install, back up the existing mod outside **Mods**. Copy **VHOLUMEPhotoCamera** from the manual ZIP's **ue4ss\Mods** into the game's **VHOLUME\Binaries\Win64\ue4ss\Mods**. This update replaces the existing Photo Camera mod.
 
-To switch back, close the game, move the current **VHOLUMEPhotoCamera** folder out of **Mods**, then move the dated backup into **Mods** and rename it **VHOLUMEPhotoCamera**. You can also reinstall any earlier build from its ZIP. This preview saves bindings in **VHOLUMEPhotoCamera.keys.controls-preview**. On first use it restores every keybind to its default while retaining exposure options and aim-scaling preferences. Previous binding profiles remain available for switching back. Later changes made in Keybinds save normally.
+To switch back, close the game, move the current **VHOLUMEPhotoCamera** folder out of **Mods**, then move the dated backup into **Mods** and rename it **VHOLUMEPhotoCamera**. You can also reinstall any earlier build from its ZIP. The mod saves bindings in **VHOLUMEPhotoCamera.keys.controls-preview**. On first use it restores every keybind to its default while retaining exposure options and aim-scaling preferences. Previous binding profiles remain available for switching back. Later changes made in Keybinds save normally.
+
+For Linux/Proton, use `python3 install-linux.py` and the complete Steam launch option it prints. See [Linux setup](LINUX.md). Both installers preserve a previous mod as a dated backup.
 
 ## Optical finder
 
@@ -54,9 +56,9 @@ Lowering the finder, opening Studio, stowing, and pausing leave queued saves run
 
 **Dedicated render** is recommended. It renders only the photo at the chosen size, keeping gameplay resolution unchanged. **Switch game resolution** temporarily switches the live game to a window at the photo dimensions, captures, then restores the original running resolution and display mode. It also restores the original video-setting values, which can differ from the current window when launch overrides are in use. The mod does not save or confirm video settings. Capture completion waits for the original viewport to return. Cancellation, menus, and save errors also trigger restoration. Failed restore requests remain queued for retry; another photo cannot start until restoration finishes. Both the viewport dimensions and running display mode are verified before completion. If a requested window size cannot be applied, the shot is canceled; select Dedicated render for sizes your display cannot accommodate.
 
-Native PNG + EXR capture passed at 5760 x 3240, 5760 x 3840, 7680 x 4320, 7680 x 5120, and 7680 x 7680. Independent PNG and EXR readers decoded the files and checked dimensions, finite float16 pixel data, and opaque alpha. Temporary 6K/8K game windows could not be applied on the tested setup; both attempts canceled cleanly and restored the original video state. Use Dedicated render for those sizes.
+Native Windows PNG + EXR capture passed at 5760 x 3240, 5760 x 3840, 7680 x 4320, 7680 x 5120, and 7680 x 7680. Independent PNG and EXR readers decoded the files and checked dimensions, finite float16 pixel data, and opaque alpha. Temporary 6K/8K game windows could not be applied on the tested setup; both attempts canceled cleanly and restored the original video state. Use Dedicated render for those sizes.
 
-Large captures require more GPU memory and preparation time. This is a Windows preview. The existing Linux/Proton package has not been updated for these capture features.
+Large captures require more GPU memory and preparation time. Windows and Linux/Proton have the same capture and queue features. Linux includes a native DNG converter and requires its Steam launch wrapper; live Proton GPU capture remains unverified.
 
 ## Exposure
 
@@ -109,7 +111,7 @@ The layout uses Xbox-style labels. The left stick moves and the right stick aims
 
 | Input | Action |
 | --- | --- |
-| **View / LT / RT** | Equip or stow / raise or lower finder / take photo |
+| **View / LT / RT** | Open Studio or stow / raise or lower finder / take photo |
 | **A / X / B / Y** | Single-shot AF / AF or MF / depth of field / Photo Studio |
 | **L3** | Toggle slow walk in solo play |
 | **D-pad Left/Right / Up / Down** | Previous or next lens / exposure mode / frame ratio |
@@ -119,11 +121,13 @@ The layout uses Xbox-style labels. The left stick moves and the right stick aims
 | **Studio D-pad / A / B** | Navigate or adjust / select / back |
 | **Subject placement RT / LT / D-pad Left/Right / Up / X** | Place / finish / rotate / change pose / undo |
 
-The game's normal pause control still opens its menu. Photos save in **%LOCALAPPDATA%\VHOLUME\Saved\Screenshots\Windows**.
+The game's normal pause control still opens its menu. Photos use the selected Studio output folder; the Windows default is **%LOCALAPPDATA%\VHOLUME\Saved\Screenshots\Windows**.
 
 ## Compatibility and testing
 
 Tested with VHOLUME Steam build **26455274** and UE4SS **3.0.1-1011-gb50986bd**. Native checks covered exposure modes, Auto ISO, motion captures, input mapping restoration, panoramic output, the Studio UI, and stronger DOF. Offline checks covered 84 landscape/portrait finder layouts, exact crop ratios, settings compatibility, and renderer restoration.
+
+Linux native testing on Ubuntu 22.04 and 24.04 covers the installer, folder/process helpers, exact HDR conversion, 6K/8K dimensions, job metadata, cancellation, duplicate locks, restart recovery and the shared Lua control/exposure suite. Live Proton gameplay, GPU capture, Steam Deck, Linux desktop integration and audio remain unverified.
 
 Controller logic was exercised with simulated button states. Physical controller detection and Steam Input mappings remain unverified. Motion capture sample density depends on game frame rate.
 

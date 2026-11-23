@@ -27,7 +27,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--loader-bundle',type=Path,required=True)
     parser.add_argument('--output',type=Path,required=True)
-    parser.add_argument('--version',default='1.0.3-rc.2')
+    parser.add_argument('--version',default='1.1.0')
     args=parser.parse_args();assert re.fullmatch(r'\d+\.\d+\.\d+(?:-[A-Za-z0-9.]+)?',args.version)
     root=Path(__file__).resolve().parents[2];mod=root/'ue4ss/Mods/VHOLUMEPhotoCamera'
     files=sorted(p for p in mod.rglob('*') if p.is_file() and '__pycache__' not in p.parts)

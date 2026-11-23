@@ -1,0 +1,74 @@
+{
+  "build": "1.1.0",
+  "captured_on": "2026-11-23",
+  "timezone": "America/New_York",
+  "platform": "Windows",
+  "game_build": "26455274",
+  "method": "Native in-game screenshots, unretouched. Scene cameras positioned in-engine; camera controls and UI from the shipping mod. Controller buttons simulated for the controller screenshot; physical hardware not tested.",
+  "screenshots": [
+    {
+      "file": "viewfinder-optical.png",
+      "map": "/Game/Levels/DemoConapt/Demo00_Conapt00",
+      "description": "Conapt city overlook",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "e932a9d658b04cf974de83cfc391adf126b21a4605e0af552c01ac7ca5bb5eaa"
+    },
+    {
+      "file": "controller-controls.png",
+      "map": "/Game/Levels/DemoConapt/Demo00_Conapt00",
+      "description": "Conapt city overlook; controller shortcuts",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "f52a52d2b7138a29643000c6f7a37eb02ddaf6deb885e7931a9930ae0628dac9"
+    },
+    {
+      "file": "photo-studio.png",
+      "map": "/Game/Levels/DemoConapt/Demo00_Conapt00",
+      "description": "Conapt; Photo Studio",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "612a25d80012cba1cc44e80bbdcdf23c2373613ed53f9c2a17644b153c6d94dd"
+    },
+    {
+      "file": "output-settings.png",
+      "map": "/Game/Levels/DemoConapt/Demo00_Conapt00",
+      "description": "Conapt; PNG + EXR + DNG at 8K",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "b886cef40215faa348803651c5dcb6f15668d1bb7ce6baf160402be326a9998c"
+    },
+    {
+      "file": "exposure-settings.png",
+      "map": "/Game/Levels/DemoConapt/Demo00_Conapt00",
+      "description": "Conapt; Aperture Priority and Auto ISO",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "9188fa3cb47a19c52867f7493978474ce05fd31f6ae4095266bc75ce51b57e08"
+    },
+    {
+      "file": "viewfinder-queue.png",
+      "map": "/Game/Levels/DemoConapt/Demo00_Conapt00",
+      "description": "Conapt; two captured RAW jobs",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "324e6feca3d50b2e378c39b719954725fc08d8064c0f4bd6b8549d4f8cdfb143"
+    },
+    {
+      "file": "viewfinder-panoramic.png",
+      "map": "/Game/Levels/Gold/Gold_nightlife",
+      "description": "Nightlife; Tungsten look and 65:24 framing",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "8f2ea80e913d383a1206d207fdabe2877db7220bd247682e283732c1beebbcab"
+    },
+    {
+      "file": "viewfinder-showers.png",
+      "map": "/Game/Levels/DemoConapt/Demo07_Showers00",
+      "description": "Showers; 50 mm interior",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "7552246e4837f6551c9359af709903ed24ca2376563c7989e02d30a57d12b1d1"
+    }
+  ]
+}

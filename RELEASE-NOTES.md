@@ -1,33 +1,45 @@
-# VHOLUME Photo Camera v1.0.3 - Full-resolution RAW photography
+# VHOLUME Photo Camera v1.1 - A complete photography toolkit
 
-Release candidate v1.0.3-rc.2. Prepared for approval; not published.
+## Dedicated controller and scrollwheel controls
 
-Keep taking photos while RAW files save. A disk-backed queue holds up to eight photos, shows progress in the finder and Studio, and recovers interrupted saves on the next launch. Each photo keeps its own settings. A failed conversion does not stop the rest of the queue.
+A complete camera controls overhaul puts core functions on a dedicated controller layout and modifier-plus-scrollwheel controls. Move and aim normally while adjusting focus, aperture, shutter speed, ISO, lenses, film looks, framing and exposure mode. Shortcuts appear beside each viewfinder setting and follow the active input device. Letter modifiers can be rebound; Ctrl remains available for sliding.
 
-- Full-image rendering at the selected aspect ratio and resolution, up to a 7680-pixel long edge, without cropping the viewfinder screenshot.
-- PNG with the film look and ISO grain, linear HDR EXR, or lossless linear DNG for Camera Raw / Lightroom workflows. Save any combination. DNG records aperture, shutter speed, ISO, focal length and capture time.
-- Faster DNG conversion: the earlier test converted an identical 8K square source in about 8 seconds versus 50 seconds before optimization. Rendering/export time is additional; results vary by hardware. Fast compression can produce slightly larger files while preserving the same HDR pixels.
-- Dedicated photo rendering, plus an optional temporary game-resolution method that restores the original running resolution, display mode and saved video-setting values. Recovery retries if a restore request fails.
-- Clear defaults: 5 enters camera mode, 6 opens Studio, and right-click opens the finder from either. Dedicated mouse-wheel modifier controls and the controller layout remain available.
-- Consistent Studio navigation and spacing, output settings, and working Open Folder feedback. Ctrl remains available to the game's slide action.
+Defaults are **5** for camera mode, **6** for Photo Studio, **right-click / LT** for the finder, **left-click / RT** for the shutter, and **middle-click / A** for single-shot AF. Studio supports controller navigation.
 
-## Downloads planned
+## Full-resolution PNG, EXR and DNG photography
 
-| Platform | Build | Package |
-| --- | --- | --- |
-| Windows | v1.0.3 after approval | Installer and manual ZIP |
-| Linux / Proton | v1.0.3 after approval | Separate Linux installer package |
+Photos render directly at the selected aspect ratio and resolution, up to a **7680-pixel long edge**, including 6K and 8K. Save finished PNGs, scene-linear HDR EXRs, lossless linear DNGs, or any combination. DNG includes ISO, aperture, shutter speed, focal length and capture time for external RAW editing workflows.
 
-Both platforms offer the complete controls overhaul, exposure modes, Auto ISO, motion captures, full-resolution output, EXR/DNG, and background RAW queue. Linux uses a bundled native converter from the same source as Windows. The two host adapters handle platform-specific process launching and folder actions; the remaining camera scripts and assets match. Linux remains experimental until live Proton gameplay is verified.
+Dedicated render keeps gameplay resolution unchanged. The optional temporary-resolution method restores the original resolution and display mode after capture, cancellation or failure. Choose and open a custom photo folder from Studio.
 
-## Editing and compatibility
+## Keep shooting while RAW files save
 
-DNG and EXR contain rendered HDR data before the film look and artificial grain. Focus blur, depth of field, motion and rendered exposure are already part of the image. These files are not sensor RAW. Camera Raw and independent image readers were tested; Lightroom itself, physical controllers, Steam Input mappings and live Linux/Steam Deck gameplay remain unverified.
+An **eight-photo background queue** saves DNGs while you take more photos after each frame has rendered and exported. Every photo retains its own settings. Captured frames keep saving with the finder lowered, camera stowed, Studio open or game paused. Interrupted queues recover on the next launch; failed conversions do not stop later photos. Progress appears in the finder and Studio.
 
-The game still renders and exports one frame at a time. Queue capacity bounds waiting work; it is not an unlimited burst buffer. Large captures need sufficient GPU memory and disk space. Dedicated render is recommended for 6K/8K; temporary 6K/8K game-window requests could not be applied on the tested setup and canceled cleanly.
+## Exposure, Auto ISO and camera motion
+
+**Game, Manual, Aperture Priority and Shutter Priority** modes offer a choice between the game's normal brightness and physical exposure controls. Auto ISO supports a configurable range and preferred minimum shutter in Aperture Priority. Settings span **f/1.0-f/16**, **8 s-1/32000 s**, and **ISO 100-6400**. Grain strength and size follow ISO across all eleven generic film looks.
+
+Move or pan during exposures of **1/15 s or slower** to create intentional camera-motion effects. Manual focus, fine focus, single-shot AF and a **1x-8x DOF blur multiplier** provide further control over the image. Eight focal lengths from **16 to 600 mm** have distinct lens models and optional zoom-aware sensitivity scaling.
+
+## Optical finder and refined Studio
+
+The finder combines a shaded LCD, segmented values, an EV scale above the frame, focus lamps beside the LCD, and fixed sidebars. Keybinds are integrated into setting labels. Four reticle styles, a thirds guide, portrait rotation and seven aspect ratios include **21:9** and **65:24 panoramic** framing.
+
+Studio uses consistent panels and rotating low-poly icons for Photos, Lens, Film, Frame, Exposure and Subjects. Five subject poses, placement controls, generic film names and synthesized mechanical camera sounds complete the toolkit.
+
+## Windows and Linux together
+
+Separate **Windows installer**, **Windows manual**, and **Linux/Proton installer** downloads offer matching camera, capture and background RAW-saving features. Linux includes a native DNG converter built from the same source as Windows, with no .NET installation needed. Existing installs are backed up by the installers.
+
+Windows capture and recovery were tested in-game, including 6K/8K. Linux passed automated native converter, queue, installer and shared camera checks on Ubuntu 22.04 and 24.04. Live Proton gameplay, Linux GPU capture, Steam Deck and physical controller/Steam Input mappings remain unverified, so Linux is experimental.
+
+## RAW editing notes
+
+EXR and DNG contain rendered HDR RGB before film grading and artificial grain. Focus blur, depth of field, motion and rendered exposure are baked in; these are not sensor-mosaic RAW files. Their usable highlight range comes from the HDR render. Rendering and source export still take time; the queue overlaps conversion. Dedicated render is recommended for 6K/8K. Camera Raw was tested; Lightroom itself was not.
 
 ## Credits
 
-Camera RAW support was inspired by [NewBarkTownKris](https://github.com/NewBarkTownKris) and their [Denshattack! Photo Camera](https://github.com/NewBarkTownKris/denshattack-photo-camera).
+Thank you to [NewBarkTownKris](https://github.com/NewBarkTownKris), whose [Denshattack! Photo Camera](https://github.com/NewBarkTownKris/denshattack-photo-camera) inspired the idea for camera RAW support.
 
 This product includes DNG technology under license by Adobe.

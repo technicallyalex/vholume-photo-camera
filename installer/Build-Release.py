@@ -30,7 +30,7 @@ def main():
     parser.add_argument('--loader-bundle', type=Path, required=True,
                         help='An existing installer ZIP containing the tested UE4SS archive')
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--version', default='1.0.2', help='Expected camera version banner')
+    parser.add_argument('--version', default='1.1.0', help='Expected camera version banner')
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     mod = root / 'ue4ss/Mods/VHOLUMEPhotoCamera'
@@ -42,6 +42,8 @@ def main():
     args.output.mkdir(parents=True, exist_ok=True)
     entries = {p.relative_to(root).as_posix(): p.read_bytes() for p in files}
     entries['README.md'] = (root / 'GUIDE.md').read_bytes()
+    for name in ('GUIDE.md','LINUX.md','RELEASE-NOTES.md'):
+        entries[name]=(root/name).read_bytes()
     for name in ('LinearDng.cs', 'Build.ps1', 'Build-Linux.sh', 'NativeDng.csproj', 'NATIVE-BUILD.json', 'LICENSE.txt', 'README.md'):
         entries['source/DNG/' + name] = (root / 'tools/dng' / name).read_bytes()
     manual = args.output / 'VHOLUME-Photo-Camera.zip'
@@ -66,6 +68,7 @@ def main():
         loader_name: loader,
         manual.name: manual.read_bytes(),
         'README.md': entries['README.md'],
+        **{name:entries[name] for name in ('GUIDE.md','LINUX.md','RELEASE-NOTES.md')},
     }
     installer = args.output / 'VHOLUME-Photo-Camera-Installer.zip'
     archive(installer, installer_entries)

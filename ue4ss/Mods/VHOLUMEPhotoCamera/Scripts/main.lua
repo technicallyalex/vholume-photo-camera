@@ -741,7 +741,7 @@ local function publishShot(shot,now)
     end
     local metadata=io.open(shot.base..".json","wb")
     if metadata then
-        metadata:write(string.format('{"build":"1.0.3-rc.2","width":%d,"height":%d,"focalLengthMm":%d,"iso":%d,"aperture":%.3f,"shutterSeconds":%.9f,"film":"%s","formats":"%s","hdr":"linear HDR, no film simulation or grain","method":"%s"}\n',
+        metadata:write(string.format('{"build":"1.1.0","width":%d,"height":%d,"focalLengthMm":%d,"iso":%d,"aperture":%.3f,"shutterSeconds":%.9f,"film":"%s","formats":"%s","hdr":"linear HDR, no film simulation or grain","method":"%s"}\n',
             shot.width,shot.height,shot.focalLength,shot.iso,shot.aperture,shot.shutterSeconds,
             shot.film,shot.formatName,shot.method))
         metadata:close()
@@ -1633,4 +1633,4 @@ else
     LoopInGameThreadWithDelay(1, tick)
 end
 
-log("Photo Camera 1.0.3-rc.2 ready. Press 5 for camera mode or 6 for Studio.")
+log("Photo Camera 1.1.0 ready. Press 5 for camera mode or 6 for Studio.")
