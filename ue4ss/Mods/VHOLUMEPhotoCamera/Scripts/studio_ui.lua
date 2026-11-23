@@ -45,6 +45,7 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
         t:SetFont({FontObject=font,TypefaceFontName=FName("Regular"),Size=size*unit/dpi})
         t:SetText(FText(value))
         t:SetColorAndOpacity({SpecifiedColor=c,ColorUseRule=0})
+        if size<=10 and sy>=28*unit then t:SetAutoWrapText(true) end
         if center then ue.call("/Script/UMG.TextLayoutWidget:SetJustification",t,1) end
         return t
     end
@@ -65,6 +66,14 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
     end
     local function glyph(name,px,py,size)
         return picture("Studio/ui-"..name,px,py,size,size,1)
+    end
+    local function panelHeader(left,top,width,height,title,icon)
+        block(left,top,width,height,color(.025,.038,.032,.98))
+        block(left,top,width,2*unit,gold)
+        local innerX,innerW=left+13*unit,width-26*unit
+        glyph(icon,innerX,top+13*unit,21*unit)
+        label(innerX+30*unit,top+9*unit,innerW-30*unit,26*unit,18,title,ink)
+        return innerX,innerW
     end
     buildControls(ue,ui,{
         add=add,block=block,picture=picture,
@@ -175,12 +184,9 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
     block(0,0,w,h,color(.006,.011,.009,.67))
     if keyPage then
         local group = binds.groups[keyPage]
-        local keyW,keyH = math.min(panelW,550*unit), (145 + (#group-1)*29)*unit
+        local keyW,keyH = math.min(panelW,550*unit), (185 + (#group-1)*29)*unit
         local left,top = (w-keyW)/2,(h-keyH)/2
-        local innerX,innerW = left+13*unit,keyW-26*unit
-        block(left,top,keyW,keyH,color(.025,.038,.032,.98))
-        block(left,top,keyW,2*unit,gold)
-        label(innerX,top+8*unit,innerW,30*unit,20,"PHOTO STUDIO / KEYBINDS",ink)
+        local innerX,innerW = panelHeader(left,top,keyW,keyH,"PHOTO STUDIO / KEYBINDS","keybinds")
         local tabW = (innerW-(#binds.groups-1)*5*unit)/#binds.groups
         for i, group in ipairs(binds.groups) do
             local px = innerX+(i-1)*(tabW+5*unit)
@@ -198,15 +204,21 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
             captions[id] = caption
             hitBox(innerX,py,innerW,25*unit,"bindKey",nil,id,background)
         end
-        local footerY = top+keyH-69*unit
-        local back = button(innerX,footerY,123*unit,24*unit,"BACK TO STUDIO","bindBack",nil,nil,nil,"back")
+        local footerY = top+keyH-68*unit
+        local back = button(innerX,footerY,134*unit,24*unit,"BACK TO STUDIO","bindBack",nil,nil,nil,"back")
         local reset = button(innerX+innerW-132*unit,footerY,132*unit,24*unit,"RESET DEFAULTS","bindReset")
-        local status = label(innerX,footerY+27*unit,innerW,18*unit,10,"",gold)
-        ui.addControlRow(innerX,footerY+46*unit,innerW,{
+        local status = label(innerX,footerY-40*unit,innerW,32*unit,9,"",gold)
+        local keyboardHints=add("CanvasPanel",innerX,footerY+43*unit,innerW,16*unit)
+        ui.addControlRow(0,0,innerW,{
             {"tab",0,"Focus",binds.tabHint()}, {"enter",0,"Activate","Enter"},
             {"studio",0,"Back",binds.token("studio")},
-        },nil,true,.83)
-        function ui.keyStatus(capturing, message, resetting)
+            {"finder",0,"Finder",binds.token("finder")},
+        },keyboardHints,true,.78)
+        local controllerHint=label(innerX,footerY+43*unit,innerW,16*unit,8,"",quiet)
+        function ui.keyStatus(capturing, message, resetting, controller)
+            ue.call(widgetPath.."SetVisibility",keyboardHints,not controller and not capturing and 3 or 2)
+            controllerHint:SetText(FText(capturing and "Select Cancel Rebind to stop capturing input."
+                or controller and "D-PAD   Navigate       A   Select       B   Back       LT   Finder" or ""))
             for id, caption in pairs(captions) do
                 caption:SetText(FText(id == capturing and "PRESS INPUT" or binds.label(id)))
             end
@@ -224,13 +236,9 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
     end
 
     if outputPage then
-        local pw,ph=math.min(740*unit,w-30*unit),350*unit
+        local pw,ph=math.min(740*unit,w-30*unit),360*unit
         local left,top=(w-pw)/2,(h-ph)/2
-        local innerX,innerW=left+18*unit,pw-36*unit
-        block(left,top,pw,ph,color(.025,.038,.032,.98))
-        block(left,top,pw,2*unit,gold)
-        glyph("photos",innerX,top+14*unit,21*unit)
-        label(innerX+30*unit,top+11*unit,innerW-30*unit,26*unit,18,"PHOTO STUDIO / OUTPUT",ink)
+        local innerX,innerW=panelHeader(left,top,pw,ph,"PHOTO STUDIO / OUTPUT","photos")
         label(innerX,top+47*unit,innerW,16*unit,9,"FILE AND IMAGE SIZE",gold)
         local values,rows={},{}
         for i,row in ipairs({{"format","FILE FORMAT"},{"resolution","RESOLUTION / LONG EDGE"},{"method","CAPTURE METHOD"}}) do
@@ -241,15 +249,16 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
             rows[#rows+1]=row[1]
         end
         local sizeText=label(innerX,top+209*unit,innerW,20*unit,12,"",ink)
-        local info=label(innerX,top+238*unit,innerW,36*unit,8.5,"",quiet)
+        local info=label(innerX,top+238*unit,innerW,28*unit,9,"",quiet)
         updateContext=function()
             local selected=hovered or focused
             info:SetText(FText(captureConfig.help(selected and selected.card or "resolution")))
         end
-        local notice=label(innerX,top+277*unit,innerW,18*unit,9,"",gold)
-        button(innerX,top+301*unit,138*unit,24*unit,"BACK TO STUDIO","outputBack",nil,nil,nil,"back")
-        button(innerX+innerW-144*unit,top+301*unit,144*unit,24*unit,"OPEN VIEWFINDER","finder",nil,nil,nil,"finder")
-        local hint=label(innerX,top+330*unit,innerW,16*unit,8,"",quiet)
+        local footerY=top+ph-68*unit
+        local notice=label(innerX,footerY-22*unit,innerW,18*unit,9,"",gold)
+        button(innerX,footerY,134*unit,24*unit,"BACK TO STUDIO","outputBack",nil,nil,nil,"back")
+        button(innerX+innerW-134*unit,footerY,134*unit,24*unit,"OPEN VIEWFINDER","finder",nil,nil,nil,"finder")
+        local hint=label(innerX,footerY+43*unit,innerW,16*unit,8,"",quiet)
         function ui.notice(message) notice:SetText(FText(message)) end
         function ui.update(_,_,_,_,_,_,controller)
             values.format:SetText(FText(captureConfig.formats[captureConfig.format]))
@@ -273,11 +282,7 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
     if exposurePage then
         local pw, ph = (wide and 960 or 580)*unit, (wide and 340 or 490)*unit
         local left, top = (w-pw)/2, (h-ph)/2
-        local innerX, innerW = left+13*unit, pw-26*unit
-        block(left,top,pw,ph,color(.025,.038,.032,.98))
-        block(left,top,pw,2*unit,gold)
-        glyph("exposure",innerX,top+13*unit,21*unit)
-        label(innerX+29*unit,top+9*unit,innerW,26*unit,19,"PHOTO STUDIO / EXPOSURE",ink)
+        local innerX, innerW = panelHeader(left,top,pw,ph,"PHOTO STUDIO / EXPOSURE","exposure")
         local modesY, isoY = top+49*unit, top+(wide and 49 or 220)*unit
         local column = wide and (innerW-16*unit)/2 or innerW
         local isoX = wide and innerX+column+16*unit or innerX
@@ -315,7 +320,7 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
             end
         end
         local infoY = isoY+161*unit
-        local info = label(isoX,infoY,column,18*unit,9,"",quiet)
+        local info = label(isoX,infoY,column,28*unit,9,"",quiet)
         local currentConfig
         updateContext = function()
             if not currentConfig then return end
@@ -325,11 +330,11 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
             info:SetText(FText(exposure.help(currentConfig,action,target and target.step)))
         end
         local footerY = top+ph-68*unit
-        button(innerX,footerY,132*unit,24*unit,"BACK TO STUDIO","exposureBack",nil,nil,nil,"back")
+        button(innerX,footerY,134*unit,24*unit,"BACK TO STUDIO","exposureBack",nil,nil,nil,"back")
         button(innerX+innerW-134*unit,footerY,134*unit,24*unit,
             "OPEN VIEWFINDER","finder",nil,nil,nil,"finder")
-        local notice = label(innerX,footerY+25*unit,innerW,16*unit,9,"",gold)
-        local hint = label(innerX,footerY+43*unit,innerW,16*unit,9,"",quiet)
+        local notice = label(innerX,footerY-22*unit,innerW,18*unit,9,"",gold)
+        local hint = label(innerX,footerY+43*unit,innerW,16*unit,8,"",quiet)
         function ui.notice(value) notice:SetText(FText(value)) end
         function ui.update(_,_,_,_,_,config,controller)
             currentConfig = config
@@ -354,12 +359,8 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
         return attach()
     end
 
-    block(x,y,panelW,panelH,color(.025,.038,.032,.98))
-    block(x,y,panelW,2*unit,gold)
-    local innerX, innerW = x+13*unit,panelW-26*unit
-    glyph("finder",innerX,y+13*unit,21*unit)
-    label(innerX+29*unit,y+7*unit,innerW-29*unit,27*unit,19,"PHOTO STUDIO",ink)
-    label(innerX+29*unit,y+32*unit,innerW-29*unit,16*unit,9,"CAMERA SETUP",quiet)
+    local innerX, innerW = panelHeader(x,y,panelW,panelH,"PHOTO STUDIO","finder")
+    label(innerX+30*unit,y+33*unit,innerW-30*unit,13*unit,8,"CAMERA SETUP",quiet)
 
     local footerY = y+panelH-67*unit
     local notice = label(innerX,footerY-16*unit,innerW,16*unit,10,"",gold)
@@ -409,10 +410,10 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
         if card == "photos" then
             tile.value = label(innerX,py+110*unit,innerW,20*unit,14,"",ink,true)
             tile.detail = label(innerX,py+134*unit,innerW,17*unit,8.5,"",quiet,true)
-            button(innerX,py+156*unit,innerW,21*unit,"OPEN FOLDER","select",i,nil,nil,"photos")
-            button(innerX,py+181*unit,innerW,21*unit,"CHOOSE FOLDER","choosePhotos",i,nil,nil,"photos")
-            button(innerX,py+205*unit,innerW,12*unit,"USE DEFAULT","resetPhotos",i,nil,7)
-            button(innerX,py+229*unit,innerW,22*unit,"OUTPUT SETTINGS","outputOpen",i)
+            button(innerX,py+156*unit,innerW,21*unit,"OUTPUT SETTINGS","outputOpen",i)
+            button(innerX,py+181*unit,innerW,21*unit,"OPEN FOLDER","openPhotos",i,nil,nil,"photos")
+            button(innerX,py+206*unit,innerW,21*unit,"CHOOSE FOLDER","choosePhotos",i,nil,nil,"photos")
+            button(innerX,py+231*unit,innerW,21*unit,"RESET FOLDER","resetPhotos",i)
         elseif card == "exposure" then
             tile.value = label(innerX,py+110*unit,innerW,20*unit,13,"",ink,true)
             tile.detail = label(innerX,py+134*unit,innerW,17*unit,8.5,"",quiet,true)
@@ -428,7 +429,7 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
                 label(innerX,py+216*unit,innerW,12*unit,8,"DOF MULTIPLIER",quiet)
                 tile.dofMultiplier = stepper(innerX,py+231*unit,innerW,11,"dofBoost",i)
             elseif card == "film" then
-                label(innerX,py+159*unit,innerW,15*unit,9,"Grain follows ISO",quiet,true)
+                tile.filmInfo=label(innerX,py+159*unit,innerW,15*unit,8.5,"",quiet,true)
             elseif card == "frame" then
                 tile.rotate = button(innerX,py+156*unit,innerW,21*unit,"ROTATE FRAME","portrait",i,nil,nil,"rotate")
                 glyph("reticle",innerX+3*unit,py+181*unit,11*unit)
@@ -487,6 +488,8 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
         tiles.frame.grid:SetText(FText(config.grid and "THIRDS GRID ON" or "THIRDS GRID OFF"))
         tiles.lens.scaling:SetText(FText(content.lens[4] and "AIM SCALING ON" or "AIM SCALING OFF"))
         tiles.lens.dofMultiplier:SetText(FText(config.dofStrengths[config.dofBoost].."x"))
+        tiles.film.filmInfo:SetText(FText(captureConfig and captureConfig.format==2
+            and "Preview only / EXR ungraded" or "PNG grain follows ISO"))
     end
     function ui.tick(now)
         local frame = math.floor(now*10)

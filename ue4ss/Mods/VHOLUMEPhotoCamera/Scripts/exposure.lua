@@ -92,7 +92,7 @@ function exposure.help(config, action, mode)
             or "Used in A mode with Auto ISO."
     end
     local selected = action == "exposureMode" and mode or config.mode
-    if selected == 1 then return "Game exposure. ISO sets grain." end
+    if selected == 1 then return "Game controls brightness. ISO sets preview/PNG grain." end
     if selected == 2 then
         return config.auto and "Set aperture and shutter. ISO is automatic."
             or "Set aperture, shutter, and ISO."

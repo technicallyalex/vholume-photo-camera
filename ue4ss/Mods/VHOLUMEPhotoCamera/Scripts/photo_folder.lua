@@ -74,22 +74,32 @@ return function(scriptPath)
         return limit and leaf:sub(1,limit-1).."…" or leaf
     end
     function photos.choose()
-        if request then return "FOLDER CHOOSER ALREADY OPEN" end
+        if request then return "WAIT FOR THE FOLDER ACTION" end
         sequence = sequence+1
         local result = setting..".choose-"..os.time().."-"..sequence
         os.remove(result)
         local launch = command("Choose",result)
         if not launch then return "FOLDER CHOOSER PATH UNAVAILABLE" end
         if not os.execute('start "" /b '..launch) then return "COULD NOT OPEN FOLDER CHOOSER" end
-        request = result
+        request = {path=result,kind="choose",started=os.time()}
         return "CHOOSE A PHOTO FOLDER"
     end
     function photos.poll()
         if not request then return end
-        local result = read(request,32780)
-        if not result then return end
-        os.remove(request)
+        local pending=request
+        local result = read(pending.path,32780)
+        if not result then
+            if pending.kind=="open" and os.time()-pending.started>=12 then
+                request=nil
+                return "COULD NOT OPEN PHOTO FOLDER"
+            end
+            return
+        end
+        os.remove(pending.path)
         request = nil
+        if pending.kind=="open" then
+            return result=="OPENED" and "PHOTO FOLDER OPENED" or "COULD NOT OPEN PHOTO FOLDER"
+        end
         if result == "CANCELLED" then return "PHOTO FOLDER UNCHANGED" end
         local path = normalize(result:match("^OK\n(.+)$"))
         if not path then return "COULD NOT USE PHOTO FOLDER" end
@@ -102,7 +112,7 @@ return function(scriptPath)
         return persist(path) and "PHOTO FOLDER UPDATED" or "COULD NOT SAVE PHOTO FOLDER"
     end
     function photos.reset()
-        if request then return "CLOSE THE FOLDER CHOOSER FIRST" end
+        if request then return "WAIT FOR THE FOLDER ACTION" end
         return persist(default) and "DEFAULT PHOTO FOLDER RESTORED" or "COULD NOT SAVE PHOTO FOLDER"
     end
     function photos.prepare()
@@ -113,9 +123,14 @@ return function(scriptPath)
         return true
     end
     function photos.open()
-        local launch = command("Open")
-        return launch and os.execute('start "" /b '..launch) and "PHOTO FOLDER OPENED"
-            or "COULD NOT OPEN PHOTO FOLDER"
+        if request then return "WAIT FOR THE FOLDER ACTION" end
+        sequence=sequence+1
+        local result=setting..".open-"..os.time().."-"..sequence
+        os.remove(result)
+        local launch = command("Open",result)
+        if not launch or not os.execute('start "" /b '..launch) then return "COULD NOT OPEN PHOTO FOLDER" end
+        request={path=result,kind="open",started=os.time()}
+        return "OPENING PHOTO FOLDER"
     end
     return photos
 end

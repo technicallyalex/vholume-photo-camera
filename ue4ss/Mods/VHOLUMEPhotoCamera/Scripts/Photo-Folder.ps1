@@ -6,7 +6,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $encoding = New-Object Text.UTF8Encoding($false)
-$initial = $encoding.GetString([Convert]::FromBase64String($InitialPathBase64))
+$initial = [IO.Path]::GetFullPath($encoding.GetString([Convert]::FromBase64String($InitialPathBase64)).Replace('/','\'))
 $result = if ($ResultPathBase64) { $encoding.GetString([Convert]::FromBase64String($ResultPathBase64)) }
 function Test-OutputFolder([string]$path) {
     [IO.Directory]::CreateDirectory($path) | Out-Null
@@ -41,8 +41,32 @@ try {
         'Prepare' { Test-OutputFolder $initial }
         'Open' {
             Test-OutputFolder $initial
+            # Shell.Application.Open can silently ignore slash-normalized paths.
+            # Launch Explorer directly, then acknowledge the actual folder window.
+            $launch = New-Object Diagnostics.ProcessStartInfo
+            $launch.FileName = Join-Path $env:WINDIR 'explorer.exe'
+            $launch.Arguments = '"' + $initial.TrimEnd('\') + '"'
+            $launch.UseShellExecute = $true
+            $launch.WindowStyle = [Diagnostics.ProcessWindowStyle]::Normal
+            [Diagnostics.Process]::Start($launch) | Out-Null
             $shell = New-Object -ComObject Shell.Application
-            try { $shell.Open($initial) } finally { [Runtime.InteropServices.Marshal]::ReleaseComObject($shell) | Out-Null }
+            try {
+                $opened = $false
+                for ($attempt=0; $attempt -lt 40 -and !$opened; $attempt++) {
+                    foreach ($window in @($shell.Windows())) {
+                        try {
+                            $location = [IO.Path]::GetFullPath($window.Document.Folder.Self.Path).TrimEnd('\')
+                            if ($location -eq $initial.TrimEnd('\')) { $opened=$true; break }
+                        } catch { }
+                    }
+                    if (!$opened) { Start-Sleep -Milliseconds 100 }
+                }
+                if (!$opened) { throw 'Explorer did not open the requested photo folder.' }
+            } finally { [Runtime.InteropServices.Marshal]::ReleaseComObject($shell) | Out-Null }
+            if ($result) {
+                [IO.File]::WriteAllText($result + '.tmp','OPENED',$encoding)
+                [IO.File]::Move($result + '.tmp',$result)
+            }
         }
     }
 } catch {

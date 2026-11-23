@@ -1,6 +1,6 @@
 # VHOLUME Photo Camera Guide
 
-**Version 1.0.3-alpha.2** / Windows capture preview
+**Version 1.0.3-alpha.3** / Windows capture preview
 
 A complete camera controls overhaul introduces a dedicated controller layout and controls using modifier keys and the scroll wheel for focus, exposure, lenses, film looks, and framing. Shortcuts appear beside their settings in the viewfinder. See [Keyboard and mouse](#keyboard-and-mouse) and [Controller](#controller) for the layouts.
 
@@ -26,7 +26,7 @@ The Frame card offers **21:9 Ultrawide** and **65:24 Panoramic** alongside the e
 
 ## Screenshot folder
 
-In Photo Studio, select **Photos > Choose Folder** to open the Windows folder chooser. The chosen folder is checked for write access and saved for future sessions. **Open Folder** opens the current destination, and **Use Default** restores the game's screenshot directory. Instant photos and motion exposures both use this destination. Canceling the chooser keeps the previous folder.
+In Photo Studio, select **Photos > Choose Folder** to open the Windows folder chooser. The chosen folder is checked for write access and saved for future sessions. **Open Folder** opens the current destination in Explorer and confirms that the folder opened. **Reset Folder** restores the game's screenshot directory. Selecting the Photos card with Enter or controller A opens Output Settings; folder actions have their own buttons. Instant photos and motion exposures both use this destination. Canceling the chooser keeps the previous folder.
 
 The Exposure card has a rotating low-poly +/- model. The exposure settings show a short hint for the hovered or focused control, with the selected mode as the default.
 
@@ -38,7 +38,9 @@ Use an editor that supports OpenEXR. Interpret the EXR as linear sRGB / Rec.709 
 
 **Resolution / Long Edge** offers the game's resolution or 1280, 1920, 2560, 3840, 5760, and 7680 pixels. The exact dimensions appear below the controls. They are rounded down slightly when needed to preserve the exact aspect ratio, including 21:9, 65:24, and portrait orientations. Game resolution uses the game viewport's full long edge, not the smaller viewfinder rectangle. Every photo is rendered directly at its output size; no capture is cropped from the HUD screenshot or enlarged from a smaller screenshot.
 
-**Dedicated render** is recommended. It renders only the photo at the chosen size, keeping gameplay resolution unchanged. **Switch game resolution** temporarily switches the live game to a window at the photo dimensions, captures, then restores the original running resolution and display mode. It also restores the original video-setting values, which can differ from the current window when launch overrides are in use. The mod does not save or confirm video settings. Capture completion waits for the original viewport to return. Cancellation, menus, and save errors also trigger restoration. If a requested window size cannot be applied, the shot is canceled; select Dedicated render for sizes your display cannot accommodate.
+**Dedicated render** is recommended. It renders only the photo at the chosen size, keeping gameplay resolution unchanged. **Switch game resolution** temporarily switches the live game to a window at the photo dimensions, captures, then restores the original running resolution and display mode. It also restores the original video-setting values, which can differ from the current window when launch overrides are in use. The mod does not save or confirm video settings. Capture completion waits for the original viewport to return. Cancellation, menus, and save errors also trigger restoration. Failed restore requests remain queued for retry; another photo cannot start until restoration finishes. Both the viewport dimensions and running display mode are verified before completion. If a requested window size cannot be applied, the shot is canceled; select Dedicated render for sizes your display cannot accommodate.
+
+Native PNG + EXR capture passed at 5760 x 3240, 5760 x 3840, 7680 x 4320, 7680 x 5120, and 7680 x 7680. Independent PNG and EXR readers decoded the files and checked dimensions, finite float16 pixel data, and opaque alpha. Temporary 6K/8K game windows could not be applied on the tested setup; both attempts canceled cleanly and restored the original video state. Use Dedicated render for those sizes.
 
 Large captures require more GPU memory and preparation time. This is a Windows preview. The existing Linux/Proton package has not been updated for these capture features.
 
@@ -55,7 +57,7 @@ Press **5** for camera mode or **6** for Photo Studio. **6** can open Studio eve
 
 Game mode is the default. In M, A, and S, a wider aperture, slower shutter, or higher ISO brightens the image. Available settings cover f/1.0 to f/16, 8 seconds to 1/32000 second, and ISO 100 to 6400 in roughly one-third-stop steps. [Unreal Engine exposure documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/auto-exposure-in-unreal-engine)
 
-Enable **Auto ISO** to set minimum and maximum sensitivity. Aperture Priority prefers the configured minimum shutter speed and can slow down after reaching the ISO ceiling. The viewfinder marks camera-set values **AUTO** and shows exposure error in EV. Film looks set color and tone. The actual ISO determines grain strength and size, including with the Neutral look.
+Enable **Auto ISO** to set minimum and maximum sensitivity. Aperture Priority prefers the configured minimum shutter speed and can slow down after reaching the ISO ceiling. The viewfinder marks camera-set values **AUTO** and shows exposure error in EV. Film looks set preview and PNG color and tone; EXR remains ungraded. The actual ISO determines grain strength and size, including with the Neutral look.
 
 ### Intentional camera motion
 

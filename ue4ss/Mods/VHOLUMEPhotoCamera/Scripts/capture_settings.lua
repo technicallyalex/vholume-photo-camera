@@ -52,7 +52,7 @@ return function()
                 or "EXR saves linear HDR with no film look or grain. Optics and exposure are retained."
         elseif key=="method" then
             return config.method==1 and "Renders at the selected size without changing gameplay resolution."
-                or "Temporarily changes game resolution; restores it after capture or cancellation."
+                or "Temporarily changes the game window; restores it afterward.\nUse Dedicated render for sizes the display cannot apply."
         end
         return "Sets the full image's long edge. Aspect ratio and portrait orientation are preserved."
     end

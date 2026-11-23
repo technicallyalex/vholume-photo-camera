@@ -62,4 +62,30 @@ local n=#events;resolution.restore(shot);assert(#events==n,'Repeated restore cha
 for _,event in ipairs(events) do
     if type(event)=='table' then assert(event[1]~='SaveSettings' and event[1]~='ConfirmVideoMode') end
 end
+local normalCall=ue.call
+local clock=os.time
+local now=2000
+os.time=function() return now end
+local failed={owner={pc=user},width=1280,height=720,rect={width=1920,height=1080}}
+resolution.begin(failed,{method=2})
+ue.call=function(path,...)
+    if path:match(':SetScreenResolution$') then error('injected video API failure') end
+    return normalCall(path,...)
+end
+assert(not resolution.restore(failed) and resolution.busy(),'Failed restore was discarded')
+ue.call=normalCall
+viewport={X=1280,Y=720};now=2003
+resolution.poll(user)
+assert(failed.restoreResolution.valuesRestored and resolution.busy(),'Restore was not retried')
+viewport={X=1920,Y=1080}
+ue.call=function(path,...)
+    if path:match(':IsFullscreenModeDirty$') then return true end
+    return normalCall(path,...)
+end
+assert(not resolution.restored(failed),'Matched size hid an incorrect display mode')
+ue.call=normalCall
+resolution.poll(user)
+assert(not resolution.busy() and not failed.restoreResolution)
+os.time=clock
 print('PASS: '..count..' capture size/aspect cases; settings persistence; write failure; temporary resolution restoration and idempotence.')
+print('PASS: failed video API restores remain queued; retries recover; original running mode is verified.')

@@ -370,7 +370,7 @@ end
 
 local function refreshStudio(active)
     if active.keyPage then
-        active.studio.keyStatus(active.keyCapture,active.keyNotice,active.keyReset)
+        active.studio.keyStatus(active.keyCapture,active.keyNotice,active.keyReset,active.controller)
         return
     end
     local stock, frame = film.stocks[settings.stock], film.frames[settings.frame]
@@ -379,7 +379,7 @@ local function refreshStudio(active)
     local x,y = film.ratio(settings.frame,portrait)
     local orientation = x == y and "Square frame" or (portrait and "Portrait" or "Landscape")
     active.studio.update(active.studioCard,{
-        photos={captureConfig.formats[captureConfig.format],photos.caption(),"folder"},
+        photos={captureConfig.formats[captureConfig.format],"Save to "..photos.caption(),"folder"},
         lens={string.format("%d mm",lenses[lensIndex]),"Focal length","lens"..lenses[lensIndex],binds.aimScaling()},
         film={stock[1],stock[3],stock[2]},
         frame={x..":"..y,x==y and orientation or frame[1].." / "..orientation,
@@ -715,12 +715,17 @@ local function tickMotion(shot,now)
             shot.warmUntil=nil;shot.startedAt=now;shot.accumulated=0
             return
         end
-        if shot.duration>0 then
+        if not shot.readyToSave and shot.duration>0 then
             local done,remaining=motion.tick(shot,now)
             if not done then
                 active.ui.setNotice(string.format("EXPOSING  %.1f s",remaining),now)
                 return
             end
+        end
+        if not shot.readyToSave then
+            shot.readyToSave=true
+            active.ui.setNotice(shot.png and (shot.exr and "SAVING PNG + EXR" or "SAVING PNG") or "SAVING EXR",now)
+            return
         end
         shot.exportStarted=true
         motion.save(shot)
@@ -743,7 +748,7 @@ local function tickMotion(shot,now)
         end
         local metadata=io.open(shot.base..".json","wb")
         if metadata then
-            metadata:write(string.format('{"build":"1.0.3-alpha.2","width":%d,"height":%d,"focalLengthMm":%d,"iso":%d,"aperture":%.3f,"shutterSeconds":%.6f,"film":"%s","exr":"linear HDR, no film simulation or grain","method":"%s"}\n',
+            metadata:write(string.format('{"build":"1.0.3-alpha.3","width":%d,"height":%d,"focalLengthMm":%d,"iso":%d,"aperture":%.3f,"shutterSeconds":%.6f,"film":"%s","exr":"linear HDR, no film simulation or grain","method":"%s"}\n',
                 shot.width,shot.height,shot.focalLength,shot.iso,shot.aperture,shot.shutterSeconds,
                 shot.film,shot.method))
             metadata:close()
@@ -765,8 +770,8 @@ local function shutter()
         return
     end
     if not active or not active.raised or gameplay():IsGamePaused(active.pc) then return end
-    if pending then
-        updateLabels(active,"SAVING PHOTO")
+    if pending or captureResolution.busy() then
+        updateLabels(active,captureResolution.busy() and "RESTORING VIDEO SETTINGS" or "SAVING PHOTO")
         return
     end
     local now = gameplay():GetRealTimeSeconds(active.pc)
@@ -930,10 +935,11 @@ local function studioExposure(active, target, pressed)
         step = pressed.right and 1 or -1
     end
     if pending or not item then return end
-    if item == "exposureMode" and target then
-        exposure.mode = target.step
-    elseif item == "auto" and target then
-        exposure.auto = not exposure.auto
+    if item == "exposureMode" then
+        exposure.mode = target and target.step or ((exposure.mode-1+(step or 1))%#exposure.modes+1)
+        active.studio.focus("exposureMode",exposure.mode)
+    elseif item == "auto" then
+        if target then exposure.auto = not exposure.auto else exposure.auto = (step or 1)>0 end
     elseif item == "minISO" or item == "maxISO" or item == "minShutter" then
         if not exposure.step(item,step) then return end
     else
@@ -1121,6 +1127,11 @@ local function studioTick(active, now, tab)
         active.studio.focus("captureStep",-1,"format")
         return
     end
+    if target and target.action=="openPhotos" then
+        active.studioCard=1
+        openPhotos(active)
+        return
+    end
     if pad.pressed.b then closeOptions(active); return end
     if target and target.action == "dofBoost" then
         if pending then active.studio.notice("Wait for the photo to finish saving."); return end
@@ -1207,7 +1218,11 @@ local function studioTick(active, now, tab)
         refreshStudio(active)
         if toggleFrame() then refreshStudio(active) end
     end
-    if select and card == "photos" then openPhotos(active) end
+    if select and card == "photos" then
+        active.outputPage=true
+        buildOptions(active,active.studioRect)
+        active.studio.focus("captureStep",-1,"format")
+    end
     if select and card == "subjects" then
         startPlacement(active)
         return
@@ -1316,7 +1331,7 @@ local function tick()
             bindingsLoaded = true
         end
         if bindingsLoaded then
-            captureResolution.poll()
+            captureResolution.poll(pc)
             local message = photos.poll()
             if message then
                 if state and state.studio then refreshStudio(state); state.studio.notice(message)
@@ -1525,4 +1540,4 @@ else
     LoopInGameThreadWithDelay(1, tick)
 end
 
-log("Photo Camera 1.0.3-alpha.2 ready. Press 5 for camera mode or 6 for Studio.")
+log("Photo Camera 1.0.3-alpha.3 ready. Press 5 for camera mode or 6 for Studio.")

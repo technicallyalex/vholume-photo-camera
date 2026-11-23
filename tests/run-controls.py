@@ -32,3 +32,6 @@ print(f'PASS: all {len(list(scripts.glob("*.lua")))} runtime scripts parse.')
 for file in fixture.glob('VHOLUMEPhotoCamera.capture*'):
     file.unlink()
 check(lua.luaL_loadfile(state,str(root/'tests/capture.lua').encode()) or lua.lua_pcall(state,0,0,0))
+for file in fixture.glob('VHOLUMEPhotoCamera.output-folder*'):
+    file.unlink()
+check(lua.luaL_loadfile(state,str(root/'tests/photo-folder.lua').encode()) or lua.lua_pcall(state,0,0,0))
