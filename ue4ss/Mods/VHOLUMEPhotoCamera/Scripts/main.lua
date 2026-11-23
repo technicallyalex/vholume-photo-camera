@@ -449,15 +449,28 @@ local function releaseMotion(shot)
     if not ok then log("Exposure cleanup: " .. tostring(err)) end
 end
 
-local function abortMotion(active, message)
+local function photoSaving(shot)
+    return shot and (shot.readyToSave or shot.saved)
+end
+
+local function photoNotice(shot,message,now)
+    local active=state
+    if not active or not active.ui or not valid(active.ui.widget) then return end
+    active.ui.setNotice(message,now)
+    if active.studio then active.studio.notice(message) end
+end
+
+local function abortMotion(active, message, force)
     local shot = pending
     if not shot or shot.owner ~= active then return end
+    -- An exposed frame belongs to the save job, not the viewfinder lifetime.
+    if photoSaving(shot) and not force then return end
     pending = nil
     rawOutput.cancel(shot)
     releaseMotion(shot)
     if shot.partPath then os.remove(shot.partPath) end
     if shot.exrPartPath then os.remove(shot.exrPartPath) end
-    if message then updateLabels(active,message) end
+    if message and state==active then updateLabels(active,message) end
 end
 
 local function stow(departing)
@@ -679,15 +692,17 @@ local function finishShot(shot)
     end
     pending=nil
     log((good and "Saved " or "Photo validation failed: ")..shot.base)
-    if state==shot.owner and not state.stowAt then
-        updateLabels(state,good and "PHOTO SAVED" or "PHOTO SAVE FAILED")
+    if state and not state.stowAt then
+        local message=good and "PHOTO SAVED" or "PHOTO SAVE FAILED"
+        updateLabels(state,message)
+        if state.studio then state.studio.notice(message) end
     end
 end
 
 local function motionFailed(shot,reason)
     log("Photo capture: "..tostring(reason))
     abortMotion(shot.owner,tostring(reason):find("Game could not apply",1,true)
-        and "USE DEDICATED RENDER" or "PHOTO CAPTURE FAILED")
+        and "USE DEDICATED RENDER" or "PHOTO CAPTURE FAILED",true)
 end
 
 local function publishShot(shot,now)
@@ -710,7 +725,7 @@ local function publishShot(shot,now)
     end
     local metadata=io.open(shot.base..".json","wb")
     if metadata then
-        metadata:write(string.format('{"build":"1.0.3-alpha.4","width":%d,"height":%d,"focalLengthMm":%d,"iso":%d,"aperture":%.3f,"shutterSeconds":%.9f,"film":"%s","formats":"%s","hdr":"linear HDR, no film simulation or grain","method":"%s"}\n',
+        metadata:write(string.format('{"build":"1.0.3-alpha.5","width":%d,"height":%d,"focalLengthMm":%d,"iso":%d,"aperture":%.3f,"shutterSeconds":%.9f,"film":"%s","formats":"%s","hdr":"linear HDR, no film simulation or grain","method":"%s"}\n',
             shot.width,shot.height,shot.focalLength,shot.iso,shot.aperture,shot.shutterSeconds,
             shot.film,shot.formatName,shot.method))
         metadata:close()
@@ -718,10 +733,10 @@ local function publishShot(shot,now)
     rawOutput.release(shot)
     if not shot.renderReleased then releaseMotion(shot);shot.renderReleased=true end
     log(string.format("Full-frame render %dx%d, %d samples, %s",shot.width,shot.height,shot.samples,shot.formatName))
-    shot.owner.ui.playEffect("shutter",now)
+    if state==shot.owner and valid(shot.owner.ui.widget) then shot.owner.ui.playEffect("shutter",now) end
     shot.saved=true
     if captureResolution.restored(shot) then finishShot(shot)
-    else shot.owner.ui.setNotice("RESTORING VIDEO SETTINGS",now) end
+    else photoNotice(shot,"RESTORING VIDEO SETTINGS",now) end
 end
 
 local function tickMotion(shot,now)
@@ -738,7 +753,7 @@ local function tickMotion(shot,now)
             if status=="done" then publishShot(shot,now)
             elseif shot.dngProgress~=value then
                 shot.dngProgress=value
-                active.ui.setNotice(string.format("SAVING DNG  %d%%",value),now)
+                photoNotice(shot,string.format("SAVING DNG  %d%%",value),now)
             end
             return
         end
@@ -792,7 +807,7 @@ local function tickMotion(shot,now)
             -- Return gameplay to its original video state before the external conversion.
             releaseMotion(shot);shot.renderReleased=true
             rawOutput.begin(shot);shot.convertingDNG=true
-            active.ui.setNotice("SAVING DNG",now)
+            photoNotice(shot,"SAVING DNG",now)
         else
             publishShot(shot,now)
         end
@@ -1369,6 +1384,10 @@ end
 local function pollPhotoJobs(pc)
     captureResolution.poll(pc)
     rawOutput.poll()
+    -- Keep saving through finder lowering, Studio, pause, and camera stowing.
+    if photoSaving(pending) then
+        tickMotion(pending,valid(pc) and gameplay():GetRealTimeSeconds(pc) or 0)
+    end
     return photos.poll()
 end
 
@@ -1449,7 +1468,7 @@ local function tick()
             state.ui.tickEffects(now)
             return
         end
-        if pending and pending.duration then
+        if pending and pending.duration and not photoSaving(pending) then
             local active = pending.owner
             local lower = pad.pressed.lt
             for _,input in ipairs(cameraBindings) do
@@ -1590,4 +1609,4 @@ else
     LoopInGameThreadWithDelay(1, tick)
 end
 
-log("Photo Camera 1.0.3-alpha.4 ready. Press 5 for camera mode or 6 for Studio.")
+log("Photo Camera 1.0.3-alpha.5 ready. Press 5 for camera mode or 6 for Studio.")

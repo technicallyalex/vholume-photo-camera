@@ -1,6 +1,6 @@
 # VHOLUME Photo Camera Guide
 
-**Version 1.0.3-alpha.4** / Windows capture preview
+**Version 1.0.3-alpha.5** / Windows capture preview
 
 A complete camera controls overhaul introduces a dedicated controller layout and controls using modifier keys and the scroll wheel for focus, exposure, lenses, film looks, and framing. Shortcuts appear beside their settings in the viewfinder. See [Keyboard and mouse](#keyboard-and-mouse) and [Controller](#controller) for the layouts.
 
@@ -36,9 +36,9 @@ Open **Studio > Photos > Output Settings**. Choose **PNG**, **EXR**, **DNG**, or
 
 Use an editor that supports OpenEXR. Interpret the EXR as linear sRGB / Rec.709 primaries with a D65 white point; apply a display transform or tone mapping for viewing. An unprocessed EXR can look different from the PNG. Exposure and highlight adjustments can use values above display white. HDR outputs come directly from the scene render; they are not reconstructed from PNG. [Unreal HDR capture and export](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/ImageWriteBlueprintLibrary?application_version=5.4)
 
-**DNG** is a losslessly compressed, scene-linear RGB file using the openly documented DNG format. Open it in Lightroom or Photoshop / Camera Raw to use familiar RAW exposure, white-balance, and highlight controls. It includes capture date, aperture, shutter speed, ISO, and focal length. Film simulation and artificial grain are excluded. The included converter is open source under the MIT license; its source and build instructions are in the manual package's **source/DNG** folder. Windows uses the built-in .NET Framework; no separate converter download is needed.
+**DNG** is a losslessly compressed, scene-linear RGB file using the openly documented DNG format. Open it in Lightroom or Photoshop / Camera Raw to use familiar RAW exposure, white-balance, and highlight controls. It includes capture date, aperture, shutter speed, ISO, and focal length. Film simulation and artificial grain are excluded. The converter uses up to four compression workers with a bounded memory queue and fast lossless compression. Files can be slightly larger than earlier previews. The included converter is open source under the MIT license; its source and build instructions are in the manual package's **source/DNG** folder. Windows uses the built-in .NET Framework; no separate converter download is needed.
 
-This is **rendered linear DNG**, not sensor RAW. Focus blur, DOF, motion, and the rendered exposure are already part of its pixels. Its available highlight range comes from the HDR render. A power-of-two normalization recorded in Baseline Exposure preserves all source half-float RGB values in lossless float32 data. Adobe may apply its own initial rendering, so the DNG can look different from the PNG; edit its exposure and tone as needed. PNG retains the selected film look. DNG can be saved alone, with PNG, with EXR, or with both. During conversion the finder shows progress; lowering the finder cancels and cleans up the unfinished outputs. Gameplay resolution is restored before conversion begins.
+This is **rendered linear DNG**, not sensor RAW. Focus blur, DOF, motion, and the rendered exposure are already part of its pixels. Its available highlight range comes from the HDR render. A power-of-two normalization recorded in Baseline Exposure preserves all source half-float RGB values in lossless float32 data. Adobe may apply its own initial rendering, so the DNG can look different from the PNG; edit its exposure and tone as needed. PNG retains the selected film look. DNG can be saved alone, with PNG, with EXR, or with both. During conversion the finder shows progress. Once the frame is captured, saving continues when you lower the finder, stow the camera, open Studio, or pause. Lowering the finder still cancels an unfinished exposure. Gameplay resolution is restored before conversion begins. Wait for saving to finish before exiting the game.
 
 [Adobe DNG specification and tools](https://www.adobe.com/support/downloads/dng/dng_sdk.html). This product includes DNG technology under license by Adobe.
 
@@ -69,7 +69,7 @@ Enable **Auto ISO** to set minimum and maximum sensitivity. Aperture Priority pr
 
 Raise the finder in **M** or **S** and set the shutter to **1/15 s or slower**. **Alt + wheel down** or **LB + D-pad left** slows the shutter. **A** also records motion when it meters a shutter speed in that range.
 
-Press **left-click** or **RT** once, then walk or pan while the finder shows **EXPOSING**. The mod locks focus and exposure at the start and blends scene samples as the camera moves. The completed photo saves in the selected output formats. Lower the finder or stow the camera to cancel an exposure. Game mode and faster shutter speeds use a single-frame scene render after a short preparation period.
+Press **left-click** or **RT** once, then walk or pan while the finder shows **EXPOSING**. The mod locks focus and exposure at the start and blends scene samples as the camera moves. The completed photo saves in the selected output formats. Lower the finder or stow the camera to cancel an exposure while it is still in progress. Once the exposed frame is saving, these actions leave the save running. Game mode and faster shutter speeds use a single-frame scene render after a short preparation period.
 
 Motion captures keep the selected aspect ratio and use the resolution selected in Output Settings. Sample density depends on the game's frame rate. [Unreal Engine scene capture documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/rendering-components-in-unreal-engine)
 

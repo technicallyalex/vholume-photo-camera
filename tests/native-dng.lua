@@ -128,9 +128,9 @@ local tasks={
  function() startPhoto(4,7,3) end,
  function()
   if not lastShot.convertingDNG then assert(value('pending'),'DNG finished before cancel');return false end
-  tap('RightMouseButton');report('CANCEL during DNG conversion')
+  tap('RightMouseButton');assert(value('pending')==lastShot);report('SAVE CONTINUES after lowering during DNG conversion')
  end,
- function() return completed(true) end,
+ function() return completed() end,
  function()
   rawBegin=value('rawOutput').begin
   value('rawOutput').begin=function(shot) local f=assert(io.open(shot.exrPartPath,'wb'));f:write('corrupt EXR fixture');f:close();return rawBegin(shot) end

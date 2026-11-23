@@ -1,13 +1,11 @@
-# VHOLUME Photo Camera v1.0.3-alpha.4 - DNG capture preview
+# VHOLUME Photo Camera v1.0.3-alpha.5 - Faster background DNG saving
 
-- Adds lossless linear HDR DNG for Lightroom and Photoshop / Camera Raw. Save DNG alone or with PNG, EXR, or both.
-- Records shutter speed, aperture, ISO, focal length, and capture date in DNG metadata.
-- Preserves the HDR render before the tone curve, film simulation, and artificial grain. Lossless float32 storage preserves source half-float RGB values through a recorded power-of-two exposure scale.
-- Includes an MIT-licensed converter, its source, and build instructions. No Adobe SDK or third-party runtime is bundled.
-- Converts in the background with progress feedback. Cancellation and conversion failures clean up unfinished files. Temporary game resolution is restored before conversion.
+- An exposed frame now saves independently of the viewfinder. Lowering it, stowing the camera, opening Studio, and pausing leave saving active. An unfinished long exposure can still be canceled.
+- Faster lossless DNG conversion uses bulk pixel writes, efficient checksums, and up to four compression workers with bounded memory.
+- The same 7680 x 7680 HDR input converted in 8.3 seconds versus 49.6 seconds with alpha.4 on the test system, about six times faster. This measures conversion, excluding in-game rendering and HDR export. Timing varies by hardware.
+- Fast compression preserves the same HDR pixels and camera metadata. The benchmark file grew from 219 MB to 248 MB; image quality and dynamic range are unchanged.
+- Conversion errors still clean up unfinished outputs. Completion no longer accesses a destroyed viewfinder UI after the camera is stowed.
 
-Rendered DNG is not sensor RAW: focus blur, depth of field, motion, and rendered exposure remain baked in. Adobe's initial rendering may differ from the film-look PNG. HDR editing cannot undo rendered effects.
-
-Local Windows preview only; not published. Public Windows and Linux packages remain unchanged. Physical controller hardware and live Linux/Proton DNG use were not tested.
+Local Windows preview only; not published. Public Windows and Linux packages remain unchanged. Wait for saving to finish before exiting the game.
 
 This product includes DNG technology under license by Adobe.

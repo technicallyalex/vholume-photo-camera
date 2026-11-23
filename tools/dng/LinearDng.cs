@@ -8,9 +8,10 @@ using System.IO;
 using System.IO.Compression;
 using System.Text;
 using System.Reflection;
+using System.Threading.Tasks;
 
 [assembly: AssemblyTitle("VHOLUME Linear DNG Converter")]
-[assembly: AssemblyVersion("1.0.3.4")]
+[assembly: AssemblyVersion("1.0.3.5")]
 
 internal static class LinearDng
 {
@@ -189,7 +190,13 @@ internal static class LinearDng
     static uint Adler(byte[] data)
     {
         uint a=1,b=0;
-        for (int i=0;i<data.Length;i++) { a=(a+data[i])%65521;b=(b+a)%65521; }
+        // zlib's 5552-byte bound keeps both sums within uint32 between moduli.
+        for (int start=0;start<data.Length;start+=5552)
+        {
+            int end=Math.Min(data.Length,start+5552);
+            for(int i=start;i<end;i++){a+=data[i];b+=a;}
+            a%=65521;b%=65521;
+        }
         return b<<16|a;
     }
     sealed class Tag
@@ -222,7 +229,7 @@ internal static class LinearDng
         using(var stream=new MemoryStream())
         {
             stream.WriteByte(0x78);stream.WriteByte(0x9c);
-            using(var zip=new DeflateStream(stream,CompressionLevel.Optimal,true))zip.Write(bytes,0,bytes.Length);
+            using(var zip=new DeflateStream(stream,CompressionLevel.Fastest,true))zip.Write(bytes,0,bytes.Length);
             uint sum=Adler(bytes);stream.WriteByte((byte)(sum>>24));stream.WriteByte((byte)(sum>>16));stream.WriteByte((byte)(sum>>8));stream.WriteByte((byte)sum);
             return stream.ToArray();
         }
@@ -268,7 +275,7 @@ internal static class LinearDng
         var root=new List<Tag>{Long(254,1),Long(256,(uint)pw),Long(257,(uint)ph),Short(258,8,8,8),Short(259,1),Short(262,2),
             Short(274,1),Short(277,3),Long(278,(uint)ph),Long(279,(uint)preview.Length),Short(284,1),
             Text(270,"Scene-linear HDR render. Optics and exposure baked; film look and grain excluded."),Text(271,"VHOLUME"),Text(272,"Photo Camera"),
-            Text(305,"VHOLUME Photo Camera 1.0.3-alpha.4"),Text(306,job["captured"]),
+            Text(305,"VHOLUME Photo Camera 1.0.3-alpha.5"),Text(306,job["captured"]),
             new Tag(50706,1,4,new byte[]{1,4,0,0}),new Tag(50707,1,4,new byte[]{1,4,0,0}),
             Text(50708,"VHOLUME Photo Camera Linear HDR"),
             Rational(50721,true,3.2404542,-1.5371385,-.4985314,-.9692660,1.8760108,.0415560,.0556434,-.2040259,1.0572252),
@@ -287,15 +294,25 @@ internal static class LinearDng
             writer.Write((ushort)0x4949);writer.Write((ushort)42);writer.Write((uint)8);
             Directory(writer,8,root);Directory(writer,rawAt,raw);Directory(writer,exifAt,exif);
             stream.Position=previewAt;writer.Write(preview);
+            // Bound memory and CPU use while compressing independent strips in parallel.
+            int workers=Math.Max(1,Math.Min(4,Environment.ProcessorCount/2));
+            var queue=new Queue<Task<byte[]>>();int written=0;
+            Action drain=()=>
+            {
+                CheckCancel();byte[] packed=queue.Dequeue().GetAwaiter().GetResult();
+                offsets[written]=checked((uint)stream.Position);counts[written]=(uint)packed.Length;
+                writer.Write(packed);written++;
+                Progress(40+Math.Min(height,written*16)*59/height);
+            };
             image.Blocks((y,rows,rgb)=>
             {
-                byte[] pixels=Bytes(w=>{foreach(float value in rgb)w.Write(value/scale);});
-                byte[] packed=Zip(pixels);int strip=y/16;
-                // ZIP EXR uses 16 rows. Uncompressed/ZIP1 sources are grouped below.
                 if(rows!=Math.Min(16,height-y) || y%16!=0)throw new InvalidDataException("DNG conversion requires ZIP16 EXR input.");
-                offsets[strip]=checked((uint)stream.Position);counts[strip]=(uint)packed.Length;writer.Write(packed);
-                Progress(40+(y+rows)*59/height);
+                for(int i=0;i<rgb.Length;i++)rgb[i]/=scale;
+                byte[] pixels=new byte[rgb.Length*4];Buffer.BlockCopy(rgb,0,pixels,0,pixels.Length);
+                queue.Enqueue(Task.Factory.StartNew(()=>Zip(pixels)));
+                if(queue.Count>=workers)drain();
             });
+            while(queue.Count>0)drain();
             foreach(Tag tag in raw)
             {
                 if(tag.Id==273)tag.Data=Long(273,offsets).Data;
