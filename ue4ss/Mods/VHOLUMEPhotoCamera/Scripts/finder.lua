@@ -188,6 +188,10 @@ return function(ue, pc, rect, raised, assetPath, binds, reticle, controller, gri
     ui.status = text(0, 2 * unit, 220 * unit, 17 * unit, 11, ink, "", ui.notice)
     ue.call("/Script/UMG.TextLayoutWidget:SetJustification", ui.status, 1)
     ue.call("/Script/UMG.Widget:SetRenderOpacity", ui.notice, 0)
+    local queueY=raised and math.max(5*unit,rect.y-58*unit) or toastY-21*unit
+    local saveStatus=text(w-280*unit,queueY,260*unit,17*unit,9,rgb(.88,.73,.47),"")
+    ue.call("/Script/UMG.TextLayoutWidget:SetJustification",saveStatus,2)
+    function ui.setSaveStatus(value) saveStatus:SetText(FText(value)) end
     buildAnimation(ue, ui, canvas, unit, dpi, cameraArt)
 
     ue.call("/Script/UMG.Widget:SetVisibility", widget, 3)

@@ -25,7 +25,7 @@ def run(code):
     check(lua.luaL_loadstring(state,code.encode('utf-8')) or lua.lua_pcall(state,0,0,0))
 for path in scripts.glob('*.lua'):
     check(lua.luaL_loadfile(state,str(path).encode()));lua.lua_settop(state,0)
-run('table.unpack=unpack; FName=function(value) return value end')
+run('table.unpack=unpack; local natural=math.log; math.log=function(n,b) return b and natural(n)/natural(b) or natural(n) end; FName=function(value) return value end')
 run('scripts='+json.dumps(scripts.as_posix()+'/')+'; fixture='+json.dumps(fixture.as_posix()))
 check(lua.luaL_loadfile(state,str(root/'tests/controls.lua').encode()) or lua.lua_pcall(state,0,0,0))
 print(f'PASS: all {len(list(scripts.glob("*.lua")))} runtime scripts parse.')
@@ -39,3 +39,5 @@ check(lua.luaL_loadfile(state,str(root/'tests/photo-folder.lua').encode()) or lu
 for file in fixture.glob('*dng*'):
     if file.is_file(): file.unlink()
 check(lua.luaL_loadfile(state,str(root/'tests/dng-jobs.lua').encode()) or lua.lua_pcall(state,0,0,0))
+
+check(lua.luaL_loadfile(state,str(root/'tests/exposure.lua').encode()) or lua.lua_pcall(state,0,0,0))

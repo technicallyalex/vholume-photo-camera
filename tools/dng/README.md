@@ -11,3 +11,5 @@ DNG uses Rec.709/sRGB primaries, D65 white balance, an embedded color profile, a
 Specification: https://www.adobe.com/support/downloads/dng/dng_sdk.html
 
 This product includes DNG technology under license by Adobe.
+
+The game keeps an eight-photo disk-backed FIFO with one converter process at a time. The queue journal and job metadata recover after a restart; native GPU targets are not kept alive while photos wait.

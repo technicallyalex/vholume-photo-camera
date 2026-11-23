@@ -676,7 +676,7 @@ local function adjustOptics(effect, direction)
 end
 
 local function finishShot(shot)
-    if pending ~= shot then return end
+    if shot.finished then return end
     local good=true
     if shot.png then
         local w,h=imageFile.png(shot.path)
@@ -690,9 +690,11 @@ local function finishShot(shot)
         local w,h=imageFile.dng(shot.dngPath)
         good=good and w==shot.width and h==shot.height
     end
-    pending=nil
+    rawOutput.release(shot)
+    shot.finished=true
+    if pending==shot then pending=nil end
     log((good and "Saved " or "Photo validation failed: ")..shot.base)
-    if state and not state.stowAt then
+    if state and not state.stowAt and not pending then
         local message=good and "PHOTO SAVED" or "PHOTO SAVE FAILED"
         updateLabels(state,message)
         if state.studio then state.studio.notice(message) end
@@ -701,8 +703,13 @@ end
 
 local function motionFailed(shot,reason)
     log("Photo capture: "..tostring(reason))
-    abortMotion(shot.owner,tostring(reason):find("Game could not apply",1,true)
-        and "USE DEDICATED RENDER" or "PHOTO CAPTURE FAILED",true)
+    if pending==shot then
+        abortMotion(shot.owner,tostring(reason):find("Game could not apply",1,true)
+            and "USE DEDICATED RENDER" or "PHOTO CAPTURE FAILED",true)
+    else
+        rawOutput.cancel(shot)
+        if state and not pending then photoNotice(shot,"PHOTO SAVE FAILED",gameplay():GetRealTimeSeconds(state.pc)) end
+    end
 end
 
 local function publishShot(shot,now)
@@ -711,29 +718,37 @@ local function publishShot(shot,now)
     if shot.keepEXR then outputs[#outputs+1]={shot.exrPartPath,shot.exrPath,imageFile.exr} end
     if shot.dng then outputs[#outputs+1]={shot.dngPartPath,shot.dngPath,imageFile.dng} end
     for _,output in ipairs(outputs) do
-        local w,h=output[3](output[1]);assert(w==shot.width and h==shot.height,"Invalid photo output")
+        local w,h=output[3](output[1])
+        if not w and shot.recovered then
+            w,h=output[3](output[2]);output.complete=w==shot.width and h==shot.height
+        end
+        assert(w==shot.width and h==shot.height,"Invalid photo output")
     end
-    if shot.dng and not shot.keepEXR then assert(os.remove(shot.exrPartPath),"Cannot finish temporary HDR cleanup") end
+    if shot.dng and not shot.keepEXR then
+        local file=io.open(shot.exrPartPath,"rb")
+        if file then file:close();assert(os.remove(shot.exrPartPath),"Cannot finish temporary HDR cleanup") end
+    end
     local published={}
     for _,output in ipairs(outputs) do
-        local ok,err=os.rename(output[1],output[2])
-        if not ok then
-            for _,path in ipairs(published) do os.remove(path) end
-            error(err)
+        if not output.complete then
+            local ok,err=os.rename(output[1],output[2])
+            if not ok then
+                for _,path in ipairs(published) do os.remove(path) end
+                error(err)
+            end
+            published[#published+1]=output[2]
         end
-        published[#published+1]=output[2]
     end
     local metadata=io.open(shot.base..".json","wb")
     if metadata then
-        metadata:write(string.format('{"build":"1.0.3-alpha.5","width":%d,"height":%d,"focalLengthMm":%d,"iso":%d,"aperture":%.3f,"shutterSeconds":%.9f,"film":"%s","formats":"%s","hdr":"linear HDR, no film simulation or grain","method":"%s"}\n',
+        metadata:write(string.format('{"build":"1.0.3-rc.1","width":%d,"height":%d,"focalLengthMm":%d,"iso":%d,"aperture":%.3f,"shutterSeconds":%.9f,"film":"%s","formats":"%s","hdr":"linear HDR, no film simulation or grain","method":"%s"}\n',
             shot.width,shot.height,shot.focalLength,shot.iso,shot.aperture,shot.shutterSeconds,
             shot.film,shot.formatName,shot.method))
         metadata:close()
     end
-    rawOutput.release(shot)
     if not shot.renderReleased then releaseMotion(shot);shot.renderReleased=true end
     log(string.format("Full-frame render %dx%d, %d samples, %s",shot.width,shot.height,shot.samples,shot.formatName))
-    if state==shot.owner and valid(shot.owner.ui.widget) then shot.owner.ui.playEffect("shutter",now) end
+    if shot.owner and state==shot.owner and valid(shot.owner.ui.widget) then shot.owner.ui.playEffect("shutter",now) end
     shot.saved=true
     if captureResolution.restored(shot) then finishShot(shot)
     else photoNotice(shot,"RESTORING VIDEO SETTINGS",now) end
@@ -750,11 +765,7 @@ local function tickMotion(shot,now)
         if shot.convertingDNG then
             local status,value=rawOutput.status(shot)
             if status=="error" then error("DNG conversion: "..tostring(value)) end
-            if status=="done" then publishShot(shot,now)
-            elseif shot.dngProgress~=value then
-                shot.dngProgress=value
-                photoNotice(shot,string.format("SAVING DNG  %d%%",value),now)
-            end
+            if status=="done" then publishShot(shot,now) end
             return
         end
         if shot.waitResolution then
@@ -807,7 +818,8 @@ local function tickMotion(shot,now)
             -- Return gameplay to its original video state before the external conversion.
             releaseMotion(shot);shot.renderReleased=true
             rawOutput.begin(shot);shot.convertingDNG=true
-            photoNotice(shot,"SAVING DNG",now)
+            if pending==shot then pending=nil end
+            photoNotice(shot,"PHOTO QUEUED",now)
         else
             publishShot(shot,now)
         end
@@ -822,9 +834,12 @@ local function shutter()
         return
     end
     if not active or not active.raised or gameplay():IsGamePaused(active.pc) then return end
-    if pending or captureResolution.busy() or rawOutput.busy() then
-        updateLabels(active,captureResolution.busy() and "RESTORING VIDEO SETTINGS" or rawOutput.busy() and "FINISHING DNG" or "SAVING PHOTO")
+    if pending or captureResolution.busy() then
+        updateLabels(active,captureResolution.busy() and "RESTORING VIDEO SETTINGS" or "CAPTURING PHOTO")
         return
+    end
+    if captureConfig.outputs[captureConfig.format].dng and rawOutput.full() then
+        updateLabels(active,"SAVE QUEUE FULL  8 PHOTOS");return
     end
     local now = gameplay():GetRealTimeSeconds(active.pc)
     if now < active.readyAt then
@@ -1384,9 +1399,18 @@ end
 local function pollPhotoJobs(pc)
     captureResolution.poll(pc)
     rawOutput.poll()
-    -- Keep saving through finder lowering, Studio, pause, and camera stowing.
-    if photoSaving(pending) then
-        tickMotion(pending,valid(pc) and gameplay():GetRealTimeSeconds(pc) or 0)
+    local now=valid(pc) and gameplay():GetRealTimeSeconds(pc) or 0
+    for _,shot in ipairs(rawOutput.shots()) do tickMotion(shot,now) end
+    if photoSaving(pending) then tickMotion(pending,now) end
+    if state then
+        local count=rawOutput.count();local label=""
+        local first=rawOutput.shots()[1]
+        if first then
+            local status,progress=rawOutput.status(first)
+            label=string.format("SAVING DNG  %d%%  /  %d IN QUEUE",status=="queued" and 0 or tonumber(progress) or 0,count)
+        end
+        if state.ui and state.ui.setSaveStatus then state.ui.setSaveStatus(label) end
+        if state.studio and state.studio.setSaveStatus then state.studio.setSaveStatus(label) end
     end
     return photos.poll()
 end
@@ -1609,4 +1633,4 @@ else
     LoopInGameThreadWithDelay(1, tick)
 end
 
-log("Photo Camera 1.0.3-alpha.5 ready. Press 5 for camera mode or 6 for Studio.")
+log("Photo Camera 1.0.3-rc.1 ready. Press 5 for camera mode or 6 for Studio.")

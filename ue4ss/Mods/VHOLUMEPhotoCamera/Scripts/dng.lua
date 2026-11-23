@@ -47,9 +47,32 @@ return function(scriptPath,log)
         local file=io.open(path,"rb");if not file then return true end
         file:close();return os.remove(path)~=nil
     end
+    local order={}
+    raw.limit=8
+    local function exists(path)
+        local file=io.open(path,"rb");if not file then return false end;file:close();return true
+    end
+    local function persist(exclude)
+        local lines={"version=2"}
+        for _,shot in ipairs(order) do if shot~=exclude then lines[#lines+1]=jobs[shot].path end end
+        if #lines==1 then
+            if not remove(pointer) then return false end
+            os.remove(pointer..".bak");return true
+        end
+        if not write(pointer..".tmp",table.concat(lines,"\n").."\n") then return false end
+        local previous=exists(pointer)
+        if previous then
+            os.remove(pointer..".bak")
+            if not os.rename(pointer,pointer..".bak") then os.remove(pointer..".tmp");return false end
+        end
+        if not os.rename(pointer..".tmp",pointer) then
+            if previous then os.rename(pointer..".bak",pointer) end
+            return false
+        end
+        os.remove(pointer..".bak");return true
+    end
     local function controls(job)
-        for _,suffix in ipairs({"",".result",".result.tmp",".progress",".cancel"}) do os.remove(job.path..suffix) end
-        if read(pointer,32768)==job.path then os.remove(pointer) end
+        for _,suffix in ipairs({"",".result",".result.tmp",".progress",".cancel",".started"}) do os.remove(job.path..suffix) end
     end
     local function cleanup(shot)
         local good=true
@@ -58,68 +81,125 @@ return function(scriptPath,log)
         end
         return good
     end
+    local function discard(shot)
+        if not persist(shot) then return false end
+        controls(jobs[shot]);jobs[shot]=nil
+        for i,value in ipairs(order) do if value==shot then table.remove(order,i);break end end
+        return true
+    end
+    local function fields(body)
+        local result={}
+        for key,value in body:gmatch("([^=\r\n]+)=([^\r\n]*)") do
+            if result[key] then return end
+            result[key]=value
+        end
+        return result
+    end
+    local function recover(path)
+        local prefix=saved.."/VHOLUMEPhotoCamera.dng-job-"
+        if path:sub(1,#prefix)~=prefix or path:sub(#prefix+1):find('[^%w%-]') then return end
+        local body=read(path,65536);local f=body and fields(body);if not f then return end
+        local source,destination=decode(f.source),decode(f.destination)
+        local base=source and source:match("^(.*[/\\]VHOLUME_[^/\\]+)%.part%.exr$")
+        if not base or destination~=base..".part.dng" or base:find('\0',1,true) or base:find('[\r\n]') then return end
+        local shot={base=base,path=base..".png",partPath=base..".part.png",exrPath=base..".exr",exrPartPath=source,
+            dngPath=base..".dng",dngPartPath=destination,dng=true,exr=true,renderReleased=true,convertingDNG=true}
+        local job={path=path,started=exists(path..".started") and os.time() or nil}
+        if f.jobversion~="2" then
+            job.cancelled=true;job.cancelAt=os.time();write(path..".cancel","cancel")
+        else
+            for key,range in pairs({width={1,7680},height={1,7680},iso={1,65535},aperture={.1,128},
+                    shutter={.000001,3600},focal={1,10000},mode={1,4},samples={0,1000000}}) do
+                local n=tonumber(f[key] or "");if not n or n~=n or n<range[1] or n>range[2] then return end
+                shot[key]=n
+            end
+            if shot.width%1~=0 or shot.height%1~=0 or (f.png~="0" and f.png~="1") or (f.keepEXR~="0" and f.keepEXR~="1") then return end
+            shot.png=f.png=="1";shot.keepEXR=f.keepEXR=="1"
+            shot.shutterSeconds=shot.shutter;shot.focalLength=shot.focal;shot.exposureMode=shot.mode
+            shot.film=decode(f.film);shot.method=decode(f.method);shot.captured=f.captured
+            if not shot.film or not shot.method or not shot.captured or not shot.captured:match('^%d%d%d%d:%d%d:%d%d %d%d:%d%d:%d%d$') then return end
+            shot.formatName=(shot.png and "PNG + " or "")..(shot.keepEXR and "EXR + " or "").."DNG"
+            shot.recovered=true
+            if exists(path..".result") then job.started=os.time() end
+        end
+        jobs[shot]=job;order[#order+1]=shot
+        return true
+    end
     function raw.load(directory)
         if saved then return end
-        saved=directory:gsub("[/\\]+$","")
-        pointer=saved.."/VHOLUMEPhotoCamera.dng-active"
-        local path=read(pointer,32768)
-        if not path then return end
-        local prefix=saved.."/VHOLUMEPhotoCamera.dng-job-"
-        if path:sub(1,#prefix)~=prefix or path:sub(#prefix+1):find('[^%w%-]') then os.remove(pointer);return end
-        local body=read(path,65536)
-        local source=body and decode(body:match("\nsource=([^\r\n]+)"))
-        local destination=body and decode(body:match("\ndestination=([^\r\n]+)"))
-        local base=source and source:match("^(.*[/\\]VHOLUME_[^/\\]+)%.part%.exr$")
-        if base and destination==base..".part.dng" then
-            local shot={partPath=base..".part.png",exrPartPath=source,dngPartPath=destination}
-            jobs[shot]={path=path,started=os.time(),cancelled=true,cancelAt=os.time(),recovered=true}
-            write(path..".cancel","cancel")
-            log("Cleaning an interrupted DNG conversion.")
-        else
-            os.remove(pointer)
-        end
+        saved=directory:gsub("[/\\]+$","");pointer=saved.."/VHOLUMEPhotoCamera.dng-active"
+        local body=read(pointer,262144) or read(pointer..".bak",262144)
+        if not body then return end
+        local seen={}
+        if body:sub(1,10)=="version=2\n" then
+            for path in body:sub(11):gmatch('[^\r\n]+') do
+                if not seen[path] and #order<raw.limit then recover(path);seen[path]=true end
+            end
+        else recover(body) end
+        assert(persist(),"Could not recover the photo save queue")
+        if #order>0 then log("Recovered "..#order.." queued photo save(s).") end
     end
-    function raw.busy() return next(jobs)~=nil end
-    function raw.begin(shot)
-        assert(saved and not raw.busy(),"DNG converter is already busy")
+    function raw.count() return #order end
+    function raw.full() return #order>=raw.limit end
+    function raw.busy() return #order>0 end
+    function raw.shots()
+        local list={};for _,shot in ipairs(order) do if not jobs[shot].cancelled then list[#list+1]=shot end end
+        return list
+    end
+    local function launch(job)
         local helper=(scriptPath.."../Tools/PhotoCameraDng.exe"):gsub("/","\\")
         assert(not helper:find('[%%!"\r\n]'),"DNG converter path is unsupported")
         local file=assert(io.open(helper,"rb"),"DNG converter is missing");file:close()
+        assert(write(job.path..".started",tostring(os.time())),"Cannot mark DNG job started")
+        job.started=os.time()
+        assert(os.execute('start "" /b "'..helper..'" '..encode(job.path)),"Could not launch the DNG converter")
+    end
+    function raw.begin(shot)
+        assert(saved and not raw.full(),"Photo save queue is full")
         sequence=sequence+1
         local path=saved.."/VHOLUMEPhotoCamera.dng-job-"..os.time().."-"..sequence.."-"..math.random(100000,999999)
-        local body=table.concat({"version=1","source="..encode(shot.exrPartPath),"destination="..encode(shot.dngPartPath),
+        local body=table.concat({"version=1","jobversion=2","source="..encode(shot.exrPartPath),"destination="..encode(shot.dngPartPath),
             "result="..encode(path..".result"),"width="..shot.width,"height="..shot.height,"iso="..shot.iso,
             "aperture="..shot.aperture,"shutter="..string.format("%.9f",shot.shutterSeconds),"focal="..shot.focalLength,
-            "mode="..shot.exposureMode,"captured="..shot.captured},"\n").."\n"
-        if not write(path,body) or not write(pointer,path) then
-            os.remove(path);if read(pointer,32768)==path then os.remove(pointer) end
-            error("Cannot start the DNG job")
-        end
-        local job={path=path,started=os.time()}
-        jobs[shot]=job
-        local ok=os.execute('start "" /b "'..helper..'" '..encode(path))
-        if not ok then controls(job);jobs[shot]=nil;error("Could not launch the DNG converter") end
+            "mode="..shot.exposureMode,"captured="..shot.captured,"png="..(shot.png and "1" or "0"),
+            "keepEXR="..(shot.keepEXR and "1" or "0"),"film="..encode(shot.film or "Neutral"),
+            "method="..encode(shot.method or "Dedicated render"),"samples="..(shot.samples or 0)},"\n").."\n"
+        assert(write(path,body),"Cannot write the DNG job")
+        jobs[shot]={path=path};order[#order+1]=shot
+        if not persist() then jobs[shot]=nil;table.remove(order);os.remove(path);error("Cannot save the photo queue") end
+        -- A single converter owns CPU work; other captured frames wait on disk.
     end
     function raw.cancel(shot)
-        local job=jobs[shot]
-        if not job then return end
-        job.cancelled=true;job.cancelAt=job.cancelAt or os.time()
-        write(job.path..".cancel","cancel")
+        local job=jobs[shot];if not job then return end
+        job.cancelled=true;job.cancelAt=job.cancelAt or os.time();write(job.path..".cancel","cancel")
     end
     function raw.poll()
-        for shot,job in pairs(jobs) do
-            if not job.result then job.result=read(job.path..".result",8192) end
-            local progress=tonumber(read(job.path..".progress",8) or "")
-            if progress and progress~=job.progress then
-                job.progress=math.max(0,math.min(100,progress));job.progressAt=os.time()
-            end
-            if os.time()-(job.progressAt or job.started)>=120 and not job.result then
-                job.result="ERROR\nDNG converter timed out"
-                write(job.path..".cancel","cancel")
+        local active=false
+        local snapshot={};for _,shot in ipairs(order) do snapshot[#snapshot+1]=shot end
+        for _,shot in ipairs(snapshot) do
+            local job=jobs[shot]
+            if job.started then
+                if not job.result then job.result=read(job.path..".result",8192) end
+                local progress=tonumber(read(job.path..".progress",8) or "")
+                if progress and progress~=job.progress then job.progress=math.max(0,math.min(100,progress));job.progressAt=os.time() end
+                if os.time()-(job.progressAt or job.started)>=120 and not job.result then
+                    job.result="ERROR\nDNG converter timed out";write(job.path..".cancel","cancel")
+                end
             end
             if job.cancelled then
-                if job.result or os.time()-(job.cancelAt or job.started)>=5 then
-                    if cleanup(shot) then controls(job);jobs[shot]=nil end
+                if not job.started or job.result or os.time()-job.cancelAt>=5 then
+                    if cleanup(shot) then discard(shot) end
+                end
+            end
+            if jobs[shot] and job.started then active=true end
+        end
+        if not active then
+            for _,shot in ipairs(order) do
+                local job=jobs[shot]
+                if not job.cancelled then
+                    local ok,reason=pcall(launch,job)
+                    if not ok then job.started=os.time();job.result="ERROR\n"..tostring(reason) end
+                    break
                 end
             end
         end
@@ -130,11 +210,10 @@ return function(scriptPath,log)
             if job.result=="OK\n"..shot.width.."\n"..shot.height then return "done" end
             return "error",job.result
         end
-        return "working",job.progress or 0
+        return job.started and "working" or "queued",job.progress or 0
     end
     function raw.release(shot)
-        local job=jobs[shot]
-        if job then controls(job);jobs[shot]=nil end
+        if jobs[shot] then assert(discard(shot),"Cannot commit the photo save queue") end
     end
     return raw
 end

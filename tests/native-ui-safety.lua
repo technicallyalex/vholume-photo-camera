@@ -88,7 +88,7 @@ local tasks={
   local _,size,m=video();stored={X=size.X,Y=size.Y};mode=m
   value('binds').persist=function() return true end
   value('captureConfig').step=function(key,step)
-   local cfg=value('captureConfig');local n=key=='format' and 3 or key=='resolution' and #cfg.edges or 2
+   local cfg=value('captureConfig');local n=key=='format' and #cfg.formats or key=='resolution' and #cfg.edges or 2
    cfg[key]=(cfg[key]-1+step)%n+1;return true
   end
   tap('Six');assert(state().studio and not state().raised)

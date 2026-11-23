@@ -1,6 +1,6 @@
 # VHOLUME Photo Camera Guide
 
-**Version 1.0.3-alpha.5** / Windows capture preview
+**Version 1.0.3-rc.1** / Windows release candidate
 
 A complete camera controls overhaul introduces a dedicated controller layout and controls using modifier keys and the scroll wheel for focus, exposure, lenses, film looks, and framing. Shortcuts appear beside their settings in the viewfinder. See [Keyboard and mouse](#keyboard-and-mouse) and [Controller](#controller) for the layouts.
 
@@ -38,9 +38,17 @@ Use an editor that supports OpenEXR. Interpret the EXR as linear sRGB / Rec.709 
 
 **DNG** is a losslessly compressed, scene-linear RGB file using the openly documented DNG format. Open it in Lightroom or Photoshop / Camera Raw to use familiar RAW exposure, white-balance, and highlight controls. It includes capture date, aperture, shutter speed, ISO, and focal length. Film simulation and artificial grain are excluded. The converter uses up to four compression workers with a bounded memory queue and fast lossless compression. Files can be slightly larger than earlier previews. The included converter is open source under the MIT license; its source and build instructions are in the manual package's **source/DNG** folder. Windows uses the built-in .NET Framework; no separate converter download is needed.
 
-This is **rendered linear DNG**, not sensor RAW. Focus blur, DOF, motion, and the rendered exposure are already part of its pixels. Its available highlight range comes from the HDR render. A power-of-two normalization recorded in Baseline Exposure preserves all source half-float RGB values in lossless float32 data. Adobe may apply its own initial rendering, so the DNG can look different from the PNG; edit its exposure and tone as needed. PNG retains the selected film look. DNG can be saved alone, with PNG, with EXR, or with both. During conversion the finder shows progress. Once the frame is captured, saving continues when you lower the finder, stow the camera, open Studio, or pause. Lowering the finder still cancels an unfinished exposure. Gameplay resolution is restored before conversion begins. Wait for saving to finish before exiting the game.
+This is **rendered linear DNG**, not sensor RAW. Focus blur, DOF, motion, and the rendered exposure are already part of its pixels. Its available highlight range comes from the HDR render. A power-of-two normalization recorded in Baseline Exposure preserves all source half-float RGB values in lossless float32 data. Adobe may apply its own initial rendering, so the DNG can look different from the PNG; edit its exposure and tone as needed. PNG retains the selected film look. DNG can be saved alone, with PNG, with EXR, or with both. During conversion the finder shows progress. Once the frame is captured, saving continues when you lower the finder, stow the camera, open Studio, or pause. Lowering the finder still cancels an unfinished exposure. Gameplay resolution is restored before conversion begins. The disk-backed queue is recovered on the next launch if the game closes before saving finishes. Waiting for it to finish is still the quickest way to obtain every final file.
 
 [Adobe DNG specification and tools](https://www.adobe.com/support/downloads/dng/dng_sdk.html). This product includes DNG technology under license by Adobe.
+
+### Background RAW save queue
+
+After a frame has rendered and its source files are on disk, the camera is ready for another exposure while DNG conversion continues. Up to **eight photos** may be saving or waiting. The finder and Studio show progress and the number in the queue. At capacity, the shutter reports **Save queue full**; it does not replace an older photo. PNG/EXR-only photos can still be taken when the RAW queue is full.
+
+One converter runs at a time, using up to four compression workers. Waiting photos retain their own lens, film, ISO, aperture, shutter speed, output folder and format choices. Their GPU render targets are released as soon as the source files are exported. Changing settings for a new photo does not change older photos in the queue. Rendering and source export still take time; this is not an instantaneous burst mode.
+
+Lowering the finder, opening Studio, stowing, and pausing leave queued saves running. An unfinished long exposure can still be canceled. If a conversion fails, the affected unfinished outputs are cleaned up and the following photos continue. A small journal in the game's Saved directory lets completed frames resume after the game closes. Keep the mod and its selected photo folders in place until recovery finishes. Conversions need free disk space for the temporary HDR sources and final outputs.
 
 **Resolution / Long Edge** offers the game's resolution or 1280, 1920, 2560, 3840, 5760, and 7680 pixels. The exact dimensions appear below the controls. They are rounded down slightly when needed to preserve the exact aspect ratio, including 21:9, 65:24, and portrait orientations. Game resolution uses the game viewport's full long edge, not the smaller viewfinder rectangle. Every photo is rendered directly at its output size; no capture is cropped from the HUD screenshot or enlarged from a smaller screenshot.
 
@@ -118,3 +126,7 @@ The game's normal pause control still opens its menu. Photos save in **%LOCALAPP
 Tested with VHOLUME Steam build **26455274** and UE4SS **3.0.1-1011-gb50986bd**. Native checks covered exposure modes, Auto ISO, motion captures, input mapping restoration, panoramic output, the Studio UI, and stronger DOF. Offline checks covered 84 landscape/portrait finder layouts, exact crop ratios, settings compatibility, and renderer restoration.
 
 Controller logic was exercised with simulated button states. Physical controller detection and Steam Input mappings remain unverified. Motion capture sample density depends on game frame rate.
+
+## Credits
+
+Camera RAW support was inspired by [NewBarkTownKris](https://github.com/NewBarkTownKris) and their [Denshattack! Photo Camera](https://github.com/NewBarkTownKris/denshattack-photo-camera).

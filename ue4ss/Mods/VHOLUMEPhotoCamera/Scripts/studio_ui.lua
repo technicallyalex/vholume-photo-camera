@@ -182,6 +182,9 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
     end
 
     block(0,0,w,h,color(.006,.011,.009,.67))
+    local queueStatus=label(w/2-200*unit,h-17*unit,400*unit,16*unit,9,"",gold)
+    ue.call("/Script/UMG.TextLayoutWidget:SetJustification",queueStatus,1)
+    function ui.setSaveStatus(value) queueStatus:SetText(FText(value)) end
     if keyPage then
         local group = binds.groups[keyPage]
         local keyW,keyH = math.min(panelW,550*unit), (185 + (#group-1)*29)*unit

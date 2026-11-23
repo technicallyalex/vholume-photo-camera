@@ -11,7 +11,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 
 [assembly: AssemblyTitle("VHOLUME Linear DNG Converter")]
-[assembly: AssemblyVersion("1.0.3.5")]
+[assembly: AssemblyVersion("1.0.3.6")]
 
 internal static class LinearDng
 {
@@ -275,7 +275,7 @@ internal static class LinearDng
         var root=new List<Tag>{Long(254,1),Long(256,(uint)pw),Long(257,(uint)ph),Short(258,8,8,8),Short(259,1),Short(262,2),
             Short(274,1),Short(277,3),Long(278,(uint)ph),Long(279,(uint)preview.Length),Short(284,1),
             Text(270,"Scene-linear HDR render. Optics and exposure baked; film look and grain excluded."),Text(271,"VHOLUME"),Text(272,"Photo Camera"),
-            Text(305,"VHOLUME Photo Camera 1.0.3-alpha.5"),Text(306,job["captured"]),
+            Text(305,"VHOLUME Photo Camera 1.0.3-rc.1"),Text(306,job["captured"]),
             new Tag(50706,1,4,new byte[]{1,4,0,0}),new Tag(50707,1,4,new byte[]{1,4,0,0}),
             Text(50708,"VHOLUME Photo Camera Linear HDR"),
             Rational(50721,true,3.2404542,-1.5371385,-.4985314,-.9692660,1.8760108,.0415560,.0556434,-.2040259,1.0572252),

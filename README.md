@@ -1,6 +1,6 @@
 # VHOLUME Photo Camera
 
-**Local capture preview v1.0.3-alpha.5:** faster lossless DNG saves, with conversion continuing after lowering the viewfinder, stowing the camera, opening Studio, or pausing. An unfinished exposure remains cancellable. PNG, EXR, and DNG formats and metadata are retained. [Capture settings and editing guide](GUIDE.md#full-resolution-photos-and-hdr-output). The public downloads below remain unchanged.
+**v1.0.3 release candidate / Windows:** full-resolution PNG, linear HDR EXR and DNG capture, plus an eight-photo background RAW save queue. Keep shooting after each frame is captured; queued saves continue with the finder lowered or camera stowed and recover on the next launch if interrupted. Installer and manual packages are prepared locally for review. Public downloads below remain unchanged until approval. [Capture and editing guide](GUIDE.md#full-resolution-photos-and-hdr-output).
 
 A photo mode for VHOLUME with a 35 mm viewfinder, eight lenses, film looks, manual focus, and exposure controls. Separate packages are available for Windows and Linux through Proton.
 
@@ -49,6 +49,16 @@ Select **Lens > DOF Multiplier** for 1x, 2x, 4x, or 8x out-of-focus blur without
 
 ![Panoramic 65:24 framing with the sidebars beside the image](examples/viewfinder-panoramic.png)
 
+## Background RAW queue
+
+Take another photo after the current frame is captured while DNGs save in the background. Up to eight photos can be active or waiting; their settings are retained and interrupted saves resume next launch. Rendering and source export still take time.
+
+![Viewfinder showing the eight-photo save queue and its capacity message](examples/viewfinder-queue.png)
+
 ## Example photos
 
 <img src="examples/concrete-85mm.png" alt="Black-and-white concrete detail at 85 mm" width="46%"> <img src="examples/portrait-135mm.png" alt="Character portrait at 135 mm" width="46%">
+
+## Credits
+
+Camera RAW support was inspired by [NewBarkTownKris](https://github.com/NewBarkTownKris) and their [Denshattack! Photo Camera](https://github.com/NewBarkTownKris/denshattack-photo-camera).
