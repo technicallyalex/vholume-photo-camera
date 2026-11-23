@@ -1,13 +1,13 @@
-# VHOLUME Photo Camera v1.0.3-alpha.3 - Capture and UI QA preview
+# VHOLUME Photo Camera v1.0.3-alpha.4 - DNG capture preview
 
-- Verified paired PNG + EXR output at 6K and 8K, including 7680 x 5120 and the largest square frame, 7680 x 7680.
-- Verified resolution and display-mode restoration after finder cancellation, stowing, pausing, blocked output, allocation failure, and resolution-settling timeout.
-- Restore failures remain queued for retry. New captures wait until recovery completes, and matching viewport dimensions alone no longer hide an incorrect display mode.
-- Fixed Open Folder: canonical Windows paths, direct Explorer launch, and confirmation from the requested folder window. Error/timeout messages replace premature success notices.
-- Unified Studio page headings, spacing, footer buttons, and help text. Photos card selection opens Output Settings; folder actions have explicit buttons.
-- Exposure arrows adjust modes and Auto ISO consistently. Keybinds show controller-aware navigation hints. Film text identifies EXR as an ungraded output, and saving feedback names the selected format.
-- Reviewed Studio, Output, Exposure, Keybinds, controller hints, and the finder at 1920 x 1080, 1280 x 720, and 960 x 1280.
+- Adds lossless linear HDR DNG for Lightroom and Photoshop / Camera Raw. Save DNG alone or with PNG, EXR, or both.
+- Records shutter speed, aperture, ISO, focal length, and capture date in DNG metadata.
+- Preserves the HDR render before the tone curve, film simulation, and artificial grain. Lossless float32 storage preserves source half-float RGB values through a recorded power-of-two exposure scale.
+- Includes an MIT-licensed converter, its source, and build instructions. No Adobe SDK or third-party runtime is bundled.
+- Converts in the background with progress feedback. Cancellation and conversion failures clean up unfinished files. Temporary game resolution is restored before conversion.
 
-Dedicated render supports the tested 6K/8K sizes. Temporary 6K/8K game-window requests could not be applied on this setup; they canceled cleanly and restored the original video state. Use Dedicated render for these sizes.
+Rendered DNG is not sensor RAW: focus blur, depth of field, motion, and rendered exposure remain baked in. Adobe's initial rendering may differ from the film-look PNG. HDR editing cannot undo rendered effects.
 
-Local Windows preview only; not published. The public Windows and Linux packages remain unchanged. Physical controller hardware and exhaustive fullscreen/multi-monitor combinations were not tested.
+Local Windows preview only; not published. Public Windows and Linux packages remain unchanged. Physical controller hardware and live Linux/Proton DNG use were not tested.
+
+This product includes DNG technology under license by Adobe.

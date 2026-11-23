@@ -35,3 +35,7 @@ check(lua.luaL_loadfile(state,str(root/'tests/capture.lua').encode()) or lua.lua
 for file in fixture.glob('VHOLUMEPhotoCamera.output-folder*'):
     file.unlink()
 check(lua.luaL_loadfile(state,str(root/'tests/photo-folder.lua').encode()) or lua.lua_pcall(state,0,0,0))
+
+for file in fixture.glob('*dng*'):
+    if file.is_file(): file.unlink()
+check(lua.luaL_loadfile(state,str(root/'tests/dng-jobs.lua').encode()) or lua.lua_pcall(state,0,0,0))

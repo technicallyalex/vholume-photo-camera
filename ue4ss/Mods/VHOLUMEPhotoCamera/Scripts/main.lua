@@ -25,6 +25,7 @@ local assetPath = scriptPath .. "../Assets/"
 local photos = dofile(scriptPath .. "photo_folder.lua")(scriptPath)
 local captureConfig = dofile(scriptPath .. "capture_settings.lua")()
 local imageFile = dofile(scriptPath .. "image_file.lua")
+local rawOutput = dofile(scriptPath .. "dng.lua")(scriptPath, function(message) print("[VHOLUME DNG] "..tostring(message).."\n") end)
 
 local function log(message)
     print("[VHOLUME Photo] " .. tostring(message) .. "\n")
@@ -452,6 +453,7 @@ local function abortMotion(active, message)
     local shot = pending
     if not shot or shot.owner ~= active then return end
     pending = nil
+    rawOutput.cancel(shot)
     releaseMotion(shot)
     if shot.partPath then os.remove(shot.partPath) end
     if shot.exrPartPath then os.remove(shot.exrPartPath) end
@@ -667,8 +669,12 @@ local function finishShot(shot)
         local w,h=imageFile.png(shot.path)
         good=w==shot.width and h==shot.height
     end
-    if shot.exr then
+    if shot.keepEXR then
         local w,h=imageFile.exr(shot.exrPath)
+        good=good and w==shot.width and h==shot.height
+    end
+    if shot.dng then
+        local w,h=imageFile.dng(shot.dngPath)
         good=good and w==shot.width and h==shot.height
     end
     pending=nil
@@ -684,12 +690,56 @@ local function motionFailed(shot,reason)
         and "USE DEDICATED RENDER" or "PHOTO CAPTURE FAILED")
 end
 
+local function publishShot(shot,now)
+    local outputs={}
+    if shot.png then outputs[#outputs+1]={shot.partPath,shot.path,imageFile.png} end
+    if shot.keepEXR then outputs[#outputs+1]={shot.exrPartPath,shot.exrPath,imageFile.exr} end
+    if shot.dng then outputs[#outputs+1]={shot.dngPartPath,shot.dngPath,imageFile.dng} end
+    for _,output in ipairs(outputs) do
+        local w,h=output[3](output[1]);assert(w==shot.width and h==shot.height,"Invalid photo output")
+    end
+    if shot.dng and not shot.keepEXR then assert(os.remove(shot.exrPartPath),"Cannot finish temporary HDR cleanup") end
+    local published={}
+    for _,output in ipairs(outputs) do
+        local ok,err=os.rename(output[1],output[2])
+        if not ok then
+            for _,path in ipairs(published) do os.remove(path) end
+            error(err)
+        end
+        published[#published+1]=output[2]
+    end
+    local metadata=io.open(shot.base..".json","wb")
+    if metadata then
+        metadata:write(string.format('{"build":"1.0.3-alpha.4","width":%d,"height":%d,"focalLengthMm":%d,"iso":%d,"aperture":%.3f,"shutterSeconds":%.9f,"film":"%s","formats":"%s","hdr":"linear HDR, no film simulation or grain","method":"%s"}\n',
+            shot.width,shot.height,shot.focalLength,shot.iso,shot.aperture,shot.shutterSeconds,
+            shot.film,shot.formatName,shot.method))
+        metadata:close()
+    end
+    rawOutput.release(shot)
+    if not shot.renderReleased then releaseMotion(shot);shot.renderReleased=true end
+    log(string.format("Full-frame render %dx%d, %d samples, %s",shot.width,shot.height,shot.samples,shot.formatName))
+    shot.owner.ui.playEffect("shutter",now)
+    shot.saved=true
+    if captureResolution.restored(shot) then finishShot(shot)
+    else shot.owner.ui.setNotice("RESTORING VIDEO SETTINGS",now) end
+end
+
 local function tickMotion(shot,now)
     local active=shot.owner
     local ok,reason=pcall(function()
         if shot.saved then
             assert(not shot.restoreFailed,"Game viewport restoration failed")
             if captureResolution.restored(shot) then finishShot(shot) end
+            return
+        end
+        if shot.convertingDNG then
+            local status,value=rawOutput.status(shot)
+            if status=="error" then error("DNG conversion: "..tostring(value)) end
+            if status=="done" then publishShot(shot,now)
+            elseif shot.dngProgress~=value then
+                shot.dngProgress=value
+                active.ui.setNotice(string.format("SAVING DNG  %d%%",value),now)
+            end
             return
         end
         if shot.waitResolution then
@@ -724,7 +774,7 @@ local function tickMotion(shot,now)
         end
         if not shot.readyToSave then
             shot.readyToSave=true
-            active.ui.setNotice(shot.png and (shot.exr and "SAVING PNG + EXR" or "SAVING PNG") or "SAVING EXR",now)
+            active.ui.setNotice("SAVING "..shot.formatName,now)
             return
         end
         shot.exportStarted=true
@@ -738,27 +788,14 @@ local function tickMotion(shot,now)
             local w,h=imageFile.exr(shot.exrPartPath)
             assert(w==shot.width and h==shot.height,"Invalid linear HDR EXR")
         end
-        if shot.png then assert(os.rename(shot.partPath,shot.path)) end
-        if shot.exr then
-            local renamed,err=os.rename(shot.exrPartPath,shot.exrPath)
-            if not renamed then
-                if shot.png then os.remove(shot.path) end
-                error(err)
-            end
+        if shot.dng then
+            -- Return gameplay to its original video state before the external conversion.
+            releaseMotion(shot);shot.renderReleased=true
+            rawOutput.begin(shot);shot.convertingDNG=true
+            active.ui.setNotice("SAVING DNG",now)
+        else
+            publishShot(shot,now)
         end
-        local metadata=io.open(shot.base..".json","wb")
-        if metadata then
-            metadata:write(string.format('{"build":"1.0.3-alpha.3","width":%d,"height":%d,"focalLengthMm":%d,"iso":%d,"aperture":%.3f,"shutterSeconds":%.6f,"film":"%s","exr":"linear HDR, no film simulation or grain","method":"%s"}\n',
-                shot.width,shot.height,shot.focalLength,shot.iso,shot.aperture,shot.shutterSeconds,
-                shot.film,shot.method))
-            metadata:close()
-        end
-        releaseMotion(shot)
-        log(string.format("Full-frame render %dx%d, %d samples",shot.width,shot.height,shot.samples))
-        active.ui.playEffect("shutter",now)
-        shot.saved=true
-        if captureResolution.restored(shot) then finishShot(shot)
-        else active.ui.setNotice("RESTORING VIDEO SETTINGS",now) end
     end)
     if not ok then motionFailed(shot,reason) end
 end
@@ -770,8 +807,8 @@ local function shutter()
         return
     end
     if not active or not active.raised or gameplay():IsGamePaused(active.pc) then return end
-    if pending or captureResolution.busy() then
-        updateLabels(active,captureResolution.busy() and "RESTORING VIDEO SETTINGS" or "SAVING PHOTO")
+    if pending or captureResolution.busy() or rawOutput.busy() then
+        updateLabels(active,captureResolution.busy() and "RESTORING VIDEO SETTINGS" or rawOutput.busy() and "FINISHING DNG" or "SAVING PHOTO")
         return
     end
     local now = gameplay():GetRealTimeSeconds(active.pc)
@@ -793,16 +830,19 @@ local function shutter()
             os.date("%Y%m%d_%H%M%S"),shotNumber,lenses[lensIndex],
             film.stocks[active.stock][2]:gsub("%-%d+$",""),active.exposure.iso,current.columns,current.rows)
         local exists=false
-        for _,suffix in ipairs({".png",".exr",".part.png",".part.exr",".json"}) do
+        for _,suffix in ipairs({".png",".exr",".dng",".part.png",".part.exr",".part.dng",".part.dng.writing",".json"}) do
             local file=io.open(base..suffix,"rb")
             if file then file:close();exists=true end
         end
         if not exists then break end
     until false
     local width,height=captureConfig.dimensions(current)
+    local output=captureConfig.outputs[captureConfig.format]
     local shot={base=base,path=base..".png",partPath=base..".part.png",
         exrPath=base..".exr",exrPartPath=base..".part.exr",width=width,height=height,
-        owner=active,rect=current,png=captureConfig.format~=2,exr=captureConfig.format~=1,
+        owner=active,rect=current,png=output.png==true,exr=output.exr==true or output.dng==true,
+        keepEXR=output.exr==true,dng=output.dng==true,dngPath=base..".dng",dngPartPath=base..".part.dng",
+        formatName=captureConfig.formats[captureConfig.format],exposureMode=exposure.mode,captured=os.date("%Y:%m:%d %H:%M:%S"),
         duration=exposure.mode~=1 and active.exposure.speed<=15 and 1/active.exposure.speed or 0,
         requestedAt=now,focalLength=lenses[lensIndex],iso=active.exposure.iso,
         aperture=active.exposure.aperture,shutterSeconds=1/active.exposure.speed,
@@ -1320,19 +1360,29 @@ local function stockMenuOpen(pc)
     return (not state or not state.studio) and pc.bShowMouseCursor == true
 end
 
+local function loadPhotoSettings(saved)
+    photos.load(saved)
+    captureConfig.load(saved)
+    rawOutput.load(saved)
+end
+
+local function pollPhotoJobs(pc)
+    captureResolution.poll(pc)
+    rawOutput.poll()
+    return photos.poll()
+end
+
 local function tick()
     guarded(function()
         local pc = localPlayer()
         if not bindingsLoaded and valid(pc) then
             local saved = system():GetProjectSavedDirectory():ToString()
             binds.load(saved)
-            photos.load(saved)
-            captureConfig.load(saved)
+            loadPhotoSettings(saved)
             bindingsLoaded = true
         end
         if bindingsLoaded then
-            captureResolution.poll(pc)
-            local message = photos.poll()
+            local message = pollPhotoJobs(pc)
             if message then
                 if state and state.studio then refreshStudio(state); state.studio.notice(message)
                 else log(message) end
@@ -1540,4 +1590,4 @@ else
     LoopInGameThreadWithDelay(1, tick)
 end
 
-log("Photo Camera 1.0.3-alpha.3 ready. Press 5 for camera mode or 6 for Studio.")
+log("Photo Camera 1.0.3-alpha.4 ready. Press 5 for camera mode or 6 for Studio.")

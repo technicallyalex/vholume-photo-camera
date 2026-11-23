@@ -1,6 +1,6 @@
 # VHOLUME Photo Camera
 
-**Local capture preview v1.0.3-alpha.3:** full-frame PNG and linear HDR EXR output, selectable image resolution, and an optional temporary game-resolution mode with restoration. 6K/8K dedicated captures and failure/cancellation recovery have been checked in-game. Open Folder is fixed, and Studio pages share consistent styling and navigation. The 5 / 6 / right-click controls remain. [Capture settings and editing guide](GUIDE.md#full-resolution-photos-and-hdr-output). The public downloads below remain unchanged.
+**Local capture preview v1.0.3-alpha.4:** adds linear HDR **DNG** for Lightroom and Photoshop / Camera Raw alongside PNG and EXR. Save any combination, with aperture, shutter, ISO, and lens metadata in DNG. The converter is open source, and the existing full-resolution capture and restoration controls remain. [Capture settings and editing guide](GUIDE.md#full-resolution-photos-and-hdr-output). The public downloads below remain unchanged.
 
 A photo mode for VHOLUME with a 35 mm viewfinder, eight lenses, film looks, manual focus, and exposure controls. Separate packages are available for Windows and Linux through Proton.
 

@@ -1,6 +1,9 @@
 return function()
     local config = {format=1,resolution=1,method=1}
-    config.formats = {"PNG", "EXR", "PNG + EXR"}
+    -- Existing indices remain stable for saved capture preferences.
+    config.formats = {"PNG", "EXR", "PNG + EXR", "DNG", "PNG + DNG", "EXR + DNG", "PNG + EXR + DNG"}
+    config.outputs = {{png=true},{exr=true},{png=true,exr=true},{dng=true},
+        {png=true,dng=true},{exr=true,dng=true},{png=true,exr=true,dng=true}}
     config.resolutions = {"Game resolution", "1280 px", "1920 px", "2560 px", "3840 px", "5760 px", "7680 px"}
     config.edges = {0,1280,1920,2560,3840,5760,7680}
     config.methods = {"Dedicated render", "Switch game resolution"}
@@ -12,7 +15,7 @@ return function()
         if not file then return end
         local body=file:read(1025);file:close()
         if not body or #body>1024 then return end
-        for key,limit in pairs({format=3,resolution=#config.edges,method=2}) do
+        for key,limit in pairs({format=#config.formats,resolution=#config.edges,method=2}) do
             local value=tonumber(("\n"..body.."\n"):match("\n"..key.."=(%d+)[\r\n]"))
             if value and value>=1 and value<=limit then config[key]=value end
         end
@@ -48,6 +51,11 @@ return function()
     end
     function config.help(key)
         if key=="format" then
+            local output=config.outputs[config.format]
+            if output.dng then
+                return output.png and "PNG includes the film look. DNG keeps HDR data for Lightroom / Camera Raw."
+                    or "DNG keeps HDR data for Lightroom / Camera Raw. No film look or grain is baked in."
+            end
             return config.format==1 and "PNG includes the selected film look and ISO grain."
                 or "EXR saves linear HDR with no film look or grain. Optics and exposure are retained."
         elseif key=="method" then

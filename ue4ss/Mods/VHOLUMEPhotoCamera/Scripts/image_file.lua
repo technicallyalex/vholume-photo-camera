@@ -68,4 +68,50 @@ function image.exr(path)
     file:close()
     if ok then return w,h end
 end
+function image.dng(path)
+    local file=io.open(path,"rb");if not file then return end
+    local ok,width,height=pcall(function()
+        local length=file:seek("end");file:seek("set",0)
+        assert(file:read(4)=="II\42\0","Invalid DNG header")
+        local first=string.unpack("<I4",assert(file:read(4)))
+        local function directory(offset)
+            assert(offset>=8 and offset+6<length)
+            file:seek("set",offset)
+            local count=string.unpack("<I2",assert(file:read(2)));assert(count>0 and count<=256)
+            local tags={}
+            for _=1,count do
+                local entry=assert(file:read(12));assert(#entry==12)
+                local id,kind,n,value=string.unpack("<I2I2I4I4",entry)
+                tags[id]={kind=kind,count=n,value=value,inline=entry:sub(9,12)}
+            end
+            return tags
+        end
+        local function values(tag)
+            assert(tag and tag.count>=1 and tag.count<=1024 and (tag.kind==3 or tag.kind==4))
+            local size=tag.kind==3 and 2 or 4
+            local data=tag.inline
+            if tag.count*size>4 then
+                assert(tag.value>=8 and tag.value+tag.count*size<=length)
+                file:seek("set",tag.value);data=assert(file:read(tag.count*size))
+            end
+            local out={}
+            for i=1,tag.count do out[i]=string.unpack(size==2 and "<I2" or "<I4",data,1+(i-1)*size) end
+            return out
+        end
+        local root=directory(first)
+        assert(root[50706] and root[50706].kind==1 and root[50706].count==4,"Missing DNG version")
+        local raw=directory(values(root[330])[1])
+        local w,h=values(raw[256])[1],values(raw[257])[1]
+        assert(w>0 and h>0 and w<=7680 and h<=7680)
+        assert(values(raw[262])[1]==34892 and values(raw[277])[1]==3 and values(raw[259])[1]==8)
+        local bits,format=values(raw[258]),values(raw[339])
+        for i=1,3 do assert(bits[i]==32 and format[i]==3,"Invalid floating point DNG") end
+        local offsets,counts=values(raw[273]),values(raw[279])
+        assert(#offsets==#counts and #offsets==math.ceil(h/values(raw[278])[1]))
+        for i=1,#offsets do assert(offsets[i]>=8 and counts[i]>0 and offsets[i]+counts[i]<=length,"Truncated DNG pixels") end
+        return w,h
+    end)
+    file:close()
+    if ok then return width,height end
+end
 return image

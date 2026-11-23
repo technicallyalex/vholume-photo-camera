@@ -1,6 +1,6 @@
 # VHOLUME Photo Camera Guide
 
-**Version 1.0.3-alpha.3** / Windows capture preview
+**Version 1.0.3-alpha.4** / Windows capture preview
 
 A complete camera controls overhaul introduces a dedicated controller layout and controls using modifier keys and the scroll wheel for focus, exposure, lenses, film looks, and framing. Shortcuts appear beside their settings in the viewfinder. See [Keyboard and mouse](#keyboard-and-mouse) and [Controller](#controller) for the layouts.
 
@@ -32,9 +32,15 @@ The Exposure card has a rotating low-poly +/- model. The exposure settings show 
 
 ## Full-resolution photos and HDR output
 
-Open **Studio > Photos > Output Settings**. Choose **PNG**, **EXR**, or **PNG + EXR**. PNG includes the selected film simulation and ISO grain. EXR is a 16-bit floating-point linear HDR image before the tone curve, with film grading and artificial grain removed. Focus, aperture, DOF multiplier, exposure, and intentional camera motion remain rendered into the image; those effects cannot be undone as if this were sensor RAW data. A small JSON sidecar records the capture settings.
+Open **Studio > Photos > Output Settings**. Choose **PNG**, **EXR**, **DNG**, or any combination of these formats. PNG includes the selected film simulation and ISO grain. EXR is a 16-bit floating-point linear HDR image before the tone curve, with film grading and artificial grain removed. Focus, aperture, DOF multiplier, exposure, and intentional camera motion remain rendered into the image; those effects cannot be undone as if this were sensor RAW data. A small JSON sidecar records the capture settings.
 
-Use an editor that supports OpenEXR. Interpret the EXR as linear sRGB / Rec.709 primaries with a D65 white point; apply a display transform or tone mapping for viewing. An unprocessed EXR can look different from the PNG. Exposure and highlight adjustments can use values above display white. The mod does not convert a PNG into HDR or DNG. [Unreal HDR capture and export](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/ImageWriteBlueprintLibrary?application_version=5.4)
+Use an editor that supports OpenEXR. Interpret the EXR as linear sRGB / Rec.709 primaries with a D65 white point; apply a display transform or tone mapping for viewing. An unprocessed EXR can look different from the PNG. Exposure and highlight adjustments can use values above display white. HDR outputs come directly from the scene render; they are not reconstructed from PNG. [Unreal HDR capture and export](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/ImageWriteBlueprintLibrary?application_version=5.4)
+
+**DNG** is a losslessly compressed, scene-linear RGB file using the openly documented DNG format. Open it in Lightroom or Photoshop / Camera Raw to use familiar RAW exposure, white-balance, and highlight controls. It includes capture date, aperture, shutter speed, ISO, and focal length. Film simulation and artificial grain are excluded. The included converter is open source under the MIT license; its source and build instructions are in the manual package's **source/DNG** folder. Windows uses the built-in .NET Framework; no separate converter download is needed.
+
+This is **rendered linear DNG**, not sensor RAW. Focus blur, DOF, motion, and the rendered exposure are already part of its pixels. Its available highlight range comes from the HDR render. A power-of-two normalization recorded in Baseline Exposure preserves all source half-float RGB values in lossless float32 data. Adobe may apply its own initial rendering, so the DNG can look different from the PNG; edit its exposure and tone as needed. PNG retains the selected film look. DNG can be saved alone, with PNG, with EXR, or with both. During conversion the finder shows progress; lowering the finder cancels and cleans up the unfinished outputs. Gameplay resolution is restored before conversion begins.
+
+[Adobe DNG specification and tools](https://www.adobe.com/support/downloads/dng/dng_sdk.html). This product includes DNG technology under license by Adobe.
 
 **Resolution / Long Edge** offers the game's resolution or 1280, 1920, 2560, 3840, 5760, and 7680 pixels. The exact dimensions appear below the controls. They are rounded down slightly when needed to preserve the exact aspect ratio, including 21:9, 65:24, and portrait orientations. Game resolution uses the game viewport's full long edge, not the smaller viewfinder rectangle. Every photo is rendered directly at its output size; no capture is cropped from the HUD screenshot or enlarged from a smaller screenshot.
 
@@ -57,13 +63,13 @@ Press **5** for camera mode or **6** for Photo Studio. **6** can open Studio eve
 
 Game mode is the default. In M, A, and S, a wider aperture, slower shutter, or higher ISO brightens the image. Available settings cover f/1.0 to f/16, 8 seconds to 1/32000 second, and ISO 100 to 6400 in roughly one-third-stop steps. [Unreal Engine exposure documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/auto-exposure-in-unreal-engine)
 
-Enable **Auto ISO** to set minimum and maximum sensitivity. Aperture Priority prefers the configured minimum shutter speed and can slow down after reaching the ISO ceiling. The viewfinder marks camera-set values **AUTO** and shows exposure error in EV. Film looks set preview and PNG color and tone; EXR remains ungraded. The actual ISO determines grain strength and size, including with the Neutral look.
+Enable **Auto ISO** to set minimum and maximum sensitivity. Aperture Priority prefers the configured minimum shutter speed and can slow down after reaching the ISO ceiling. The viewfinder marks camera-set values **AUTO** and shows exposure error in EV. Film looks set preview and PNG color and tone; EXR and DNG remain ungraded. The actual ISO determines grain strength and size, including with the Neutral look.
 
 ### Intentional camera motion
 
 Raise the finder in **M** or **S** and set the shutter to **1/15 s or slower**. **Alt + wheel down** or **LB + D-pad left** slows the shutter. **A** also records motion when it meters a shutter speed in that range.
 
-Press **left-click** or **RT** once, then walk or pan while the finder shows **EXPOSING**. The mod locks focus and exposure at the start and blends scene samples as the camera moves. The completed photo saves in the selected PNG, EXR, or paired format. Lower the finder or stow the camera to cancel an exposure. Game mode and faster shutter speeds use a single-frame scene render after a short preparation period.
+Press **left-click** or **RT** once, then walk or pan while the finder shows **EXPOSING**. The mod locks focus and exposure at the start and blends scene samples as the camera moves. The completed photo saves in the selected output formats. Lower the finder or stow the camera to cancel an exposure. Game mode and faster shutter speeds use a single-frame scene render after a short preparation period.
 
 Motion captures keep the selected aspect ratio and use the resolution selected in Output Settings. Sample density depends on the game's frame rate. [Unreal Engine scene capture documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/rendering-components-in-unreal-engine)
 

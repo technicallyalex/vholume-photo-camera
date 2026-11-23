@@ -488,8 +488,8 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
         tiles.frame.grid:SetText(FText(config.grid and "THIRDS GRID ON" or "THIRDS GRID OFF"))
         tiles.lens.scaling:SetText(FText(content.lens[4] and "AIM SCALING ON" or "AIM SCALING OFF"))
         tiles.lens.dofMultiplier:SetText(FText(config.dofStrengths[config.dofBoost].."x"))
-        tiles.film.filmInfo:SetText(FText(captureConfig and captureConfig.format==2
-            and "Preview only / EXR ungraded" or "PNG grain follows ISO"))
+        tiles.film.filmInfo:SetText(FText(captureConfig and not captureConfig.outputs[captureConfig.format].png
+            and "Preview only / HDR ungraded" or "PNG grain follows ISO"))
     end
     function ui.tick(now)
         local frame = math.floor(now*10)

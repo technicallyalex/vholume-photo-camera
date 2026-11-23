@@ -1,6 +1,12 @@
 local factory=dofile(scripts..'capture_settings.lua')
 local config=factory();config.load(fixture)
 assert(config.format==1 and config.resolution==1 and config.method==1)
+assert(#config.formats==7)
+local expected={{true,false,false},{false,true,false},{true,true,false},{false,false,true},{true,false,true},{false,true,true},{true,true,true}}
+for i,flags in ipairs(expected) do
+ local o=config.outputs[i]
+ assert((o.png==true)==flags[1] and (o.exr==true)==flags[2] and (o.dng==true)==flags[3])
+end
 local ratios={{3,2},{4,3},{1,1},{16,9},{5,4},{21,9},{65,24}}
 local count=0
 for i=1,#config.edges do
@@ -30,6 +36,10 @@ os.rename=function() return nil,'injected write failure' end
 local old=config.format
 assert(not config.step('format',1) and config.format==old)
 os.rename=rename
+for _=1,5 do assert(config.step('format',1)) end
+assert(config.format==7)
+local allFormats=factory();allFormats.load(fixture);assert(allFormats.format==7)
+assert(config.step('format',1) and config.format==1)
 
 local user={IsValid=function() return true end}
 local events={}
