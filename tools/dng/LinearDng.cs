@@ -11,7 +11,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 
 [assembly: AssemblyTitle("VHOLUME Linear DNG Converter")]
-[assembly: AssemblyVersion("1.0.3.6")]
+[assembly: AssemblyVersion("1.0.3.7")]
 
 internal static class LinearDng
 {
@@ -22,19 +22,29 @@ internal static class LinearDng
     {
         string result = null, output = null;
         bool published=false;
+        FileStream conversionLock=null;string lockPath=null;
         try
         {
-            if (args.Length != 1) return 2;
-            string jobPath = Utf8.GetString(System.Convert.FromBase64String(args[0]));
+            if(args.Length==1 && args[0]=="--version"){Console.WriteLine("VHOLUME Photo Camera DNG 1.0.3-rc.2");return 0;}
+            bool inline=args.Length==2 && args[0]=="--job-data";
+            if (!inline && args.Length != 1) return 2;
+            string jobPath=inline ? null : Utf8.GetString(System.Convert.FromBase64String(args[0]));
+            string[] lines=inline ? Utf8.GetString(System.Convert.FromBase64String(args[1])).Split('\n') : File.ReadAllLines(jobPath,Utf8);
             var job = new Dictionary<string,string>();
-            foreach (string line in File.ReadAllLines(jobPath, Utf8))
+            foreach (string item in lines)
             {
+                string line=item.TrimEnd('\r');
                 int at = line.IndexOf('=');
                 if (at > 0) job.Add(line.Substring(0,at),line.Substring(at+1));
             }
             if (job["version"] != "1") throw new InvalidDataException("Unsupported raw job.");
             result = Decode(job["result"]); output = Decode(job["destination"]);
-            cancelPath = jobPath + ".cancel"; progressPath = jobPath + ".progress";
+            string control=job.ContainsKey("control") ? Decode(job["control"]) : jobPath;
+            cancelPath = control + ".cancel"; progressPath = control + ".progress";
+            lockPath=control+".lock";
+            try{conversionLock=new FileStream(lockPath,FileMode.OpenOrCreate,FileAccess.ReadWrite,FileShare.None);}
+            catch(IOException){return 4;}
+
             if (File.Exists(output) || File.Exists(output+".writing")) throw new IOException("DNG output already exists.");
             CheckCancel();
             int width,height;
@@ -63,6 +73,7 @@ internal static class LinearDng
             if (result != null) Result(result,"ERROR\n"+error.GetType().Name+": "+error.Message);
             return 1;
         }
+        finally{if(conversionLock!=null){conversionLock.Dispose();Delete(lockPath);}}
     }
     static string Decode(string value) { return Utf8.GetString(System.Convert.FromBase64String(value)); }
     static int Number(Dictionary<string,string> job,string name) { return int.Parse(job[name],System.Globalization.CultureInfo.InvariantCulture); }
@@ -275,7 +286,7 @@ internal static class LinearDng
         var root=new List<Tag>{Long(254,1),Long(256,(uint)pw),Long(257,(uint)ph),Short(258,8,8,8),Short(259,1),Short(262,2),
             Short(274,1),Short(277,3),Long(278,(uint)ph),Long(279,(uint)preview.Length),Short(284,1),
             Text(270,"Scene-linear HDR render. Optics and exposure baked; film look and grain excluded."),Text(271,"VHOLUME"),Text(272,"Photo Camera"),
-            Text(305,"VHOLUME Photo Camera 1.0.3-rc.1"),Text(306,job["captured"]),
+            Text(305,"VHOLUME Photo Camera 1.0.3-rc.2"),Text(306,job["captured"]),
             new Tag(50706,1,4,new byte[]{1,4,0,0}),new Tag(50707,1,4,new byte[]{1,4,0,0}),
             Text(50708,"VHOLUME Photo Camera Linear HDR"),
             Rational(50721,true,3.2404542,-1.5371385,-.4985314,-.9692660,1.8760108,.0415560,.0556434,-.2040259,1.0572252),

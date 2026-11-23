@@ -199,6 +199,10 @@ class FolderService:
 
 def launch(argv, base=None):
     import fcntl
+    import importlib.util
+    spec=importlib.util.spec_from_file_location("vholume_native_dng",Path(__file__).resolve().parent/"native_dng.py")
+    native=importlib.util.module_from_spec(spec);spec.loader.exec_module(native)
+    NativeDngService=native.NativeDngService
 
     if not argv:
         raise RuntimeError('Use the complete Steam launch option printed by the Linux installer.')
@@ -218,12 +222,15 @@ def launch(argv, base=None):
                 if path.is_file() or path.is_symlink():
                     path.unlink()
         service = FolderService(ipc, config)
+        dng = NativeDngService(ipc, config, service.env, unix_path, prefix_path)
         worker = threading.Thread(target=service.worker, daemon=True)
+        dng_worker = threading.Thread(target=dng.worker, daemon=True)
         env = dict(os.environ)
         env['WINEDLLOVERRIDES'] = dll_overrides(env.get('WINEDLLOVERRIDES', ''))
         env['VHOLUME_PHOTO_LINUX'] = '1'
         game = None
         worker.start()
+        dng_worker.start()
         try:
             game = subprocess.Popen(argv, env=env)
             while game.poll() is None:
@@ -238,7 +245,9 @@ def launch(argv, base=None):
             return 130
         finally:
             service.close()
+            dng.close()
             worker.join(timeout=2)
+            dng_worker.join(timeout=2)
             (ipc / 'ready').unlink(missing_ok=True)
 
 

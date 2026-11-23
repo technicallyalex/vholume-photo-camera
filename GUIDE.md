@@ -1,6 +1,6 @@
 # VHOLUME Photo Camera Guide
 
-**Version 1.0.3-rc.1** / Windows release candidate
+**Version 1.0.3-rc.2** / Windows and Linux release candidate
 
 A complete camera controls overhaul introduces a dedicated controller layout and controls using modifier keys and the scroll wheel for focus, exposure, lenses, film looks, and framing. Shortcuts appear beside their settings in the viewfinder. See [Keyboard and mouse](#keyboard-and-mouse) and [Controller](#controller) for the layouts.
 
@@ -26,7 +26,7 @@ The Frame card offers **21:9 Ultrawide** and **65:24 Panoramic** alongside the e
 
 ## Screenshot folder
 
-In Photo Studio, select **Photos > Choose Folder** to open the Windows folder chooser. The chosen folder is checked for write access and saved for future sessions. **Open Folder** opens the current destination in Explorer and confirms that the folder opened. **Reset Folder** restores the game's screenshot directory. Selecting the Photos card with Enter or controller A opens Output Settings; folder actions have their own buttons. Instant photos and motion exposures both use this destination. Canceling the chooser keeps the previous folder.
+In Photo Studio, select **Photos > Choose Folder** to open the platform folder chooser. The chosen folder is checked for write access and saved for future sessions. **Open Folder** opens the current destination in the desktop file manager and confirms that the folder opened. **Reset Folder** restores the game's screenshot directory. Selecting the Photos card with Enter or controller A opens Output Settings; folder actions have their own buttons. Instant photos and motion exposures both use this destination. Canceling the chooser keeps the previous folder.
 
 The Exposure card has a rotating low-poly +/- model. The exposure settings show a short hint for the hovered or focused control, with the selected mode as the default.
 
@@ -36,7 +36,7 @@ Open **Studio > Photos > Output Settings**. Choose **PNG**, **EXR**, **DNG**, or
 
 Use an editor that supports OpenEXR. Interpret the EXR as linear sRGB / Rec.709 primaries with a D65 white point; apply a display transform or tone mapping for viewing. An unprocessed EXR can look different from the PNG. Exposure and highlight adjustments can use values above display white. HDR outputs come directly from the scene render; they are not reconstructed from PNG. [Unreal HDR capture and export](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/ImageWriteBlueprintLibrary?application_version=5.4)
 
-**DNG** is a losslessly compressed, scene-linear RGB file using the openly documented DNG format. Open it in Lightroom or Photoshop / Camera Raw to use familiar RAW exposure, white-balance, and highlight controls. It includes capture date, aperture, shutter speed, ISO, and focal length. Film simulation and artificial grain are excluded. The converter uses up to four compression workers with a bounded memory queue and fast lossless compression. Files can be slightly larger than earlier previews. The included converter is open source under the MIT license; its source and build instructions are in the manual package's **source/DNG** folder. Windows uses the built-in .NET Framework; no separate converter download is needed.
+**DNG** is a losslessly compressed, scene-linear RGB file using the openly documented DNG format. Open it in Lightroom or Photoshop / Camera Raw to use familiar RAW exposure, white-balance, and highlight controls. It includes capture date, aperture, shutter speed, ISO, and focal length. Film simulation and artificial grain are excluded. The converter uses up to four compression workers with a bounded memory queue and fast lossless compression. Files can be slightly larger than earlier previews. The included converter is open source under the MIT license; its source and build instructions are in the manual package's **source/DNG** folder. Windows uses the built-in .NET Framework. Linux/Proton includes a native executable built from the same source; no .NET installation or separate converter download is needed. Use the Linux launch wrapper so the game can communicate with its native helpers.
 
 This is **rendered linear DNG**, not sensor RAW. Focus blur, DOF, motion, and the rendered exposure are already part of its pixels. Its available highlight range comes from the HDR render. A power-of-two normalization recorded in Baseline Exposure preserves all source half-float RGB values in lossless float32 data. Adobe may apply its own initial rendering, so the DNG can look different from the PNG; edit its exposure and tone as needed. PNG retains the selected film look. DNG can be saved alone, with PNG, with EXR, or with both. During conversion the finder shows progress. Once the frame is captured, saving continues when you lower the finder, stow the camera, open Studio, or pause. Lowering the finder still cancels an unfinished exposure. Gameplay resolution is restored before conversion begins. The disk-backed queue is recovered on the next launch if the game closes before saving finishes. Waiting for it to finish is still the quickest way to obtain every final file.
 

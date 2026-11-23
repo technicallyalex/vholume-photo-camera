@@ -1,6 +1,6 @@
 # VHOLUME Photo Camera
 
-**v1.0.3 release candidate / Windows:** full-resolution PNG, linear HDR EXR and DNG capture, plus an eight-photo background RAW save queue. Keep shooting after each frame is captured; queued saves continue with the finder lowered or camera stowed and recover on the next launch if interrupted. Installer and manual packages are prepared locally for review. Public downloads below remain unchanged until approval. [Capture and editing guide](GUIDE.md#full-resolution-photos-and-hdr-output).
+**v1.0.3 release candidate / Windows and Linux:** full-resolution PNG, linear HDR EXR and DNG capture, plus an eight-photo background RAW save queue. Keep shooting after each frame is captured; queued saves continue with the finder lowered or camera stowed and recover on the next launch if interrupted. Separate Windows and Linux packages with matching features are prepared locally for review. Public downloads below remain unchanged until approval. [Capture and editing guide](GUIDE.md#full-resolution-photos-and-hdr-output).
 
 A photo mode for VHOLUME with a 35 mm viewfinder, eight lenses, film looks, manual focus, and exposure controls. Separate packages are available for Windows and Linux through Proton.
 
@@ -27,9 +27,9 @@ Photos save to `%LOCALAPPDATA%\VHOLUME\Saved\Screenshots\Windows` by default. Ch
 
 ## Linux / Proton installation
 
-Extract the Linux package, run `python3 install-linux.py`, then copy its complete printed launch option into Steam's VHOLUME properties. Python 3.9 or newer is required. The installer detects Steam libraries and backs up an existing mod. The launcher loads UE4SS and provides native folder handling without PowerShell.
+Extract the Linux package, run `python3 install-linux.py`, then copy its complete printed launch option into Steam's VHOLUME properties. Python 3.9 or newer is required. The installer detects Steam libraries and backs up an existing mod. The launcher loads UE4SS and provides native folder handling and background DNG conversion without PowerShell or a .NET installation.
 
-[Linux instructions](LINUX.md) cover custom prefixes, optional Zenity/KDialog folder selection, and Flatpak limits. Automated Linux checks cover installation, rollback, file paths, helper communication, and launcher behavior; graphics, camera audio, physical controllers, and Steam Deck gameplay still need a live Proton session.
+[Linux instructions](LINUX.md) cover custom prefixes, optional Zenity/KDialog folder selection, and Flatpak limits. Automated Linux checks cover installation, rollback, file paths, helper communication, the native DNG converter, queue recovery, and launcher behavior; graphics, camera audio, physical controllers, and Steam Deck gameplay still need a live Proton session.
 
 ## Camera controls
 

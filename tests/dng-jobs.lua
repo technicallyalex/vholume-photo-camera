@@ -1,3 +1,11 @@
+local originalDofile=dofile
+_G.dofile=function(path)
+ if path==scripts..'platform.lua' then return function() return {
+  ready=function() return true end,
+  launchDng=function() assert(os.execute('test converter'),'launch failed') end,
+ } end end
+ return originalDofile(path)
+end
 local factory=dofile(scripts..'dng.lua')
 local execute,clock=os.execute,os.time
 local now,launches,serial=1000,0,0
@@ -54,4 +62,5 @@ m.cancel(one);m.poll();assert(not m.busy())
 os.execute=function() return nil end
 one=shot();m.begin(one);m.poll();assert(m.status(one)=='error');m.cancel(one);m.poll();assert(not m.busy())
 os.execute,os.time=execute,clock
+_G.dofile=originalDofile
 print('PASS: 8-photo FIFO, full-queue backpressure, one worker, progress, failure isolation, queued cancellation, persisted recovery, timeout, journal/launch failure cleanup.')

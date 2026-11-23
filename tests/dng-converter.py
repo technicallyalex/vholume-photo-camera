@@ -1,8 +1,8 @@
 """Check the standalone Windows converter's failure and path handling."""
 import argparse,base64,subprocess,tempfile
 from pathlib import Path
-p=argparse.ArgumentParser(description=__doc__);p.add_argument('source',type=Path);p.add_argument('work',type=Path);a=p.parse_args()
-root=Path(__file__).resolve().parents[1];exe=root/'ue4ss/Mods/VHOLUMEPhotoCamera/Tools/PhotoCameraDng.exe'
+p=argparse.ArgumentParser(description=__doc__);p.add_argument('source',type=Path);p.add_argument('work',type=Path);p.add_argument('--helper',type=Path);a=p.parse_args()
+root=Path(__file__).resolve().parents[1];exe=a.helper or root/'ue4ss/Mods/VHOLUMEPhotoCamera/Tools/PhotoCameraDng.exe'
 def b64(s):return base64.b64encode(str(s).encode()).decode()
 with tempfile.TemporaryDirectory(prefix='dng-check-',dir=a.work) as directory:
  d=Path(directory);out=d/'DNG café & samples';out.mkdir();job=d/'job';dest=out/'capture.part.dng';result=d/'result'

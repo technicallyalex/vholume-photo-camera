@@ -35,14 +35,14 @@ def main():
     root = Path(__file__).resolve().parents[1]
     mod = root / 'ue4ss/Mods/VHOLUMEPhotoCamera'
     files = sorted(p for p in mod.rglob('*') if p.is_file())
-    assert len(files) == 108, 'Unexpected release payload'
+    assert len(files) == 109, 'Unexpected release payload'
     assert not any(p.is_symlink() or (p.suffix.lower() not in ('.lua', '.png', '.mp4', '.ps1', '.txt') and p.relative_to(mod).as_posix() != 'Tools/PhotoCameraDng.exe') for p in files)
     assert re.fullmatch(r'\d+\.\d+\.\d+(?:-[A-Za-z0-9.]+)?', args.version)
     assert ('Photo Camera ' + args.version + ' ready') in (mod / 'Scripts/main.lua').read_text(encoding='utf-8')
     args.output.mkdir(parents=True, exist_ok=True)
     entries = {p.relative_to(root).as_posix(): p.read_bytes() for p in files}
     entries['README.md'] = (root / 'GUIDE.md').read_bytes()
-    for name in ('LinearDng.cs', 'Build.ps1', 'LICENSE.txt', 'README.md'):
+    for name in ('LinearDng.cs', 'Build.ps1', 'Build-Linux.sh', 'NativeDng.csproj', 'NATIVE-BUILD.json', 'LICENSE.txt', 'README.md'):
         entries['source/DNG/' + name] = (root / 'tools/dng' / name).read_bytes()
     manual = args.output / 'VHOLUME-Photo-Camera.zip'
     archive(manual, entries)

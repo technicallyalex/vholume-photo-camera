@@ -2,7 +2,7 @@ name: Linux package QA
 
 on:
   push:
-    branches: ["linux/**"]
+    branches: ["linux/**", "preview/capture-*"]
   workflow_dispatch:
 
 permissions:
@@ -54,7 +54,10 @@ jobs:
           uname -a >> .work/runtime.txt
       - name: Check both platform payloads and native Linux behavior
         run: |
+          chmod +x platforms/linux/Proton/Native/PhotoCameraDng
           python installer/linux/tests/test_linux.py 2>&1 | tee .work/test.log
+          python installer/linux/tests/test_parity.py 2>&1 | tee .work/parity.log
+          python tests/run-controls.py 2>&1 | tee .work/controls.log
       - name: Rebuild and compare checksums
         run: |
           cp .work/dist/SHA256SUMS.txt .work/first-build.sha256
@@ -68,6 +71,8 @@ jobs:
           if-no-files-found: error
           path: |
             .work/test.log
+            .work/parity.log
+            .work/controls.log
             .work/runtime.txt
             .work/dist/*.zip
             .work/dist/SHA256SUMS.txt

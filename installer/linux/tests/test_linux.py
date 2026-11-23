@@ -66,16 +66,17 @@ class Fixtures(unittest.TestCase):
 
 
 class InstallerTests(Fixtures):
-    def test_windows_runtime_stays_identical_to_released_package(self):
-        candidates = [ROOT / '.work/deps/VHOLUME-Photo-Camera-Installer.zip',
-                      ROOT.parent / 'Builds/v1.0.2/VHOLUME-Photo-Camera-Installer.zip']
-        bundle = next(p for p in candidates if p.is_file())
-        with zipfile.ZipFile(bundle) as outer:
-            with zipfile.ZipFile(io.BytesIO(outer.read('VHOLUME-Photo-Camera.zip'))) as archive:
-                files = [p for p in MOD.rglob('*') if p.is_file() and '__pycache__' not in p.parts]
-                self.assertEqual(len(files), 102)
-                for path in files:
-                    self.assertEqual(path.read_bytes(), archive.read(path.relative_to(ROOT).as_posix()), str(path))
+    def test_shared_runtime_matches_current_windows_candidate(self):
+        with zipfile.ZipFile(PACKAGE / installer.MOD_ARCHIVE) as archive:
+            for path in MOD.rglob('*'):
+                if not path.is_file() or '__pycache__' in path.parts:continue
+                relative=path.relative_to(MOD).as_posix()
+                if relative in ('Scripts/photo_folder.lua','Scripts/platform.lua','Scripts/Photo-Folder.ps1','Tools/PhotoCameraDng.exe'):continue
+                self.assertEqual(path.read_bytes(),archive.read('ue4ss/Mods/VHOLUMEPhotoCamera/'+relative),relative)
+            names=archive.namelist()
+            self.assertFalse(any(n.endswith(('.exe','.ps1')) for n in names))
+            binary=archive.read('ue4ss/Mods/VHOLUMEPhotoCamera/Proton/Native/PhotoCameraDng')
+            self.assertEqual(binary[:4],b'\x7fELF')
 
     @unittest.skipUnless(sys.platform == 'linux', 'Uses real Linux /proc and advisory locks')
     def test_linux_cli_install_and_lock(self):
@@ -115,6 +116,8 @@ class InstallerTests(Fixtures):
             installer.install(PACKAGE, bin_path, self.prefix, running_check=lambda: False)
         target = bin_path / 'ue4ss/Mods/VHOLUMEPhotoCamera'
         self.assertTrue((target / 'Proton/install.json').is_file())
+        self.assertTrue((target / 'Proton/Native/PhotoCameraDng').is_file())
+        if sys.platform=='linux':self.assertTrue(os.access(target / 'Proton/Native/PhotoCameraDng',os.X_OK))
         self.assertFalse((target / 'Scripts/Photo-Folder.ps1').exists())
         self.assertEqual(installer.digest(bin_path / 'ue4ss/UE4SS.dll'), installer.LOADER_DLL_SHA256)
         (target / 'user-owned.txt').write_text('keep previous mod intact')

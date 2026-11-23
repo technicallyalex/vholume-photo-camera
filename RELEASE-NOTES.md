@@ -1,6 +1,6 @@
 # VHOLUME Photo Camera v1.0.3 - Full-resolution RAW photography
 
-Release candidate v1.0.3-rc.1. Prepared for approval; not published.
+Release candidate v1.0.3-rc.2. Prepared for approval; not published.
 
 Keep taking photos while RAW files save. A disk-backed queue holds up to eight photos, shows progress in the finder and Studio, and recovers interrupted saves on the next launch. Each photo keeps its own settings. A failed conversion does not stop the rest of the queue.
 
@@ -16,9 +16,9 @@ Keep taking photos while RAW files save. A disk-backed queue holds up to eight p
 | Platform | Build | Package |
 | --- | --- | --- |
 | Windows | v1.0.3 after approval | Installer and manual ZIP |
-| Linux / Proton | v1.0.2-linux.2, unchanged | Existing experimental installer package |
+| Linux / Proton | v1.0.3 after approval | Separate Linux installer package |
 
-The new capture and RAW queue features are Windows-only in this release. The existing Linux build remains a separate download with its original contents and testing status.
+Both platforms offer the complete controls overhaul, exposure modes, Auto ISO, motion captures, full-resolution output, EXR/DNG, and background RAW queue. Linux uses a bundled native converter from the same source as Windows. The two host adapters handle platform-specific process launching and folder actions; the remaining camera scripts and assets match. Linux remains experimental until live Proton gameplay is verified.
 
 ## Editing and compatibility
 

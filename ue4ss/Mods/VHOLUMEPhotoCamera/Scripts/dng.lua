@@ -1,5 +1,6 @@
 return function(scriptPath,log)
     local raw={}
+    local host=dofile(scriptPath.."platform.lua")(scriptPath)
     local jobs,sequence={},0
     local saved,pointer
     local alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
@@ -72,7 +73,7 @@ return function(scriptPath,log)
         os.remove(pointer..".bak");return true
     end
     local function controls(job)
-        for _,suffix in ipairs({"",".result",".result.tmp",".progress",".cancel",".started"}) do os.remove(job.path..suffix) end
+        for _,suffix in ipairs({"",".result",".result.tmp",".progress",".cancel",".started",".lock"}) do os.remove(job.path..suffix) end
     end
     local function cleanup(shot)
         local good=true
@@ -147,12 +148,10 @@ return function(scriptPath,log)
         return list
     end
     local function launch(job)
-        local helper=(scriptPath.."../Tools/PhotoCameraDng.exe"):gsub("/","\\")
-        assert(not helper:find('[%%!"\r\n]'),"DNG converter path is unsupported")
-        local file=assert(io.open(helper,"rb"),"DNG converter is missing");file:close()
+        if not host.ready() then return end -- Keep persisted photos queued until the helper is available.
         assert(write(job.path..".started",tostring(os.time())),"Cannot mark DNG job started")
         job.started=os.time()
-        assert(os.execute('start "" /b "'..helper..'" '..encode(job.path)),"Could not launch the DNG converter")
+        host.launchDng(job.path,encode(job.path))
     end
     function raw.begin(shot)
         assert(saved and not raw.full(),"Photo save queue is full")

@@ -18,9 +18,11 @@ from pathlib import Path, PurePosixPath
 
 APP_ID = '4131730'
 MOD_NAME = 'VHOLUMEPhotoCamera'
+VERSION = '1.0.3-rc.2'
+EXPECTED_MOD_FILES = 113
 MOD_ARCHIVE = 'VHOLUME-Photo-Camera-Linux-Mod.zip'
 LOADER_ARCHIVE = 'UE4SS_v3.0.1-1011-gb50986bd.zip'
-MOD_SHA256 = '9b805f9f4bfef684be39aa37784021fd88f3db5547523a9fa9ac8b5e395fe7ae'
+MOD_SHA256 = '6d8e62f0e4550e2391851ebd284c5104365894c4c314850ef9309ff1bed40734'
 LOADER_SHA256 = 'aa181789dc7226bcec94f13f054ff10477d7383321ffb98dbc3666a159b182a8'
 LOADER_DLL_SHA256 = '2ad348bf2025bd26b2aa63b478d9813afbd4e656c9bcfb3fdf6752c4d285f298'
 
@@ -120,7 +122,7 @@ def extract_mod(archive, destination):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(archive.read(entry))
         count += 1
-    if count != 103 or not (destination / 'Scripts/main.lua').is_file():
+    if count != EXPECTED_MOD_FILES or not (destination / 'Scripts/main.lua').is_file():
         raise ValueError('Unexpected mod payload')
 
 
@@ -153,8 +155,9 @@ def install(package, bin_path, prefix=None, dry_run=False, running_check=game_ru
         proton = pending / 'Proton'
         (proton / 'ipc').mkdir(mode=0o700)
         (proton / 'install.json').write_text(json.dumps({'prefix': str(prefix) if prefix else None,
-            'app_id': APP_ID, 'version': '1.0.2-linux.2'}, indent=2) + '\n', encoding='utf-8')
+            'app_id': APP_ID, 'version': VERSION}, indent=2) + '\n', encoding='utf-8')
         (proton / 'launch.sh').chmod(0o755)
+        (proton / 'Native/PhotoCameraDng').chmod(0o755)
         if running_check():
             raise RuntimeError('VHOLUME started during installation; close it and retry')
         mods.mkdir(parents=True, exist_ok=True)
@@ -185,7 +188,7 @@ def install(package, bin_path, prefix=None, dry_run=False, running_check=game_ru
         shutil.rmtree(stage)
     option = launch_option(bin_path)
     (loader / 'PhotoCamera-Linux-Launch-Options.txt').write_text(option + '\n', encoding='utf-8')
-    print('Installed Photo Camera 1.0.2 Linux/Proton preview.')
+    print('Installed Photo Camera '+VERSION+' Linux/Proton.')
     if backup:
         print('Previous mod backed up to:', backup)
     print('Steam > VHOLUME > Properties > Launch Options:\n' + option)
