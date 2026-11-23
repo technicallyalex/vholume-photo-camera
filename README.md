@@ -92,17 +92,19 @@ Windows was tested in the actual game, including all seven output combinations, 
 
 ## Example photos
 
-<img src="examples/city-16mm.png" alt="VHOLUME cityscape with a wide lens" width="100%">
+<a href="examples/city-16mm.png"><img src="examples/city-16mm.png" alt="VHOLUME cityscape with a wide lens" width="49%"></a> <a href="examples/concrete-85mm.png"><img src="examples/concrete-85mm.png" alt="Black-and-white concrete detail at 85 mm" width="49%"></a>
 
-<img src="examples/concrete-85mm.png" alt="Black-and-white concrete detail at 85 mm" width="46%"> <img src="examples/portrait-135mm.png" alt="Character portrait at 135 mm" width="46%">
+<a href="examples/portrait-135mm.png"><img src="examples/portrait-135mm.png" alt="Character portrait at 135 mm" width="49%"></a> <a href="examples/photos/stacked-concrete-50mm.png"><img src="examples/photos/stacked-concrete-50mm.png" alt="Stacked concrete detail, 50 mm, Neutral, ISO 100" width="49%"></a>
 
-Additional photographs, including sunlit architecture, misty courtyards, grain and monochrome work:
+<a href="examples/photos/sunlit-arch-50mm.png"><img src="examples/photos/sunlit-arch-50mm.png" alt="Sunlit arch, 50 mm, Vivid Color, ISO 320" width="49%"></a> <a href="examples/photos/golden-city-16mm.png"><img src="examples/photos/golden-city-16mm.png" alt="Golden city architecture, 16 mm, Vivid Color, ISO 320" width="49%"></a>
 
-<a href="examples/photos/golden-city-16mm.png"><img src="examples/photos/golden-city-16mm.png" alt="Sunlit city architecture at 16 mm" width="49%"></a> <a href="examples/photos/sunlit-arch-50mm.png"><img src="examples/photos/sunlit-arch-50mm.png" alt="Sunlit arch at 50 mm" width="49%"></a>
+<a href="examples/photos/tower-detail-85mm.png"><img src="examples/photos/tower-detail-85mm.png" alt="Tower detail with soft foreground, 85 mm, Vivid Color, ISO 320" width="49%"></a> <a href="examples/photos/sunlit-alley-50mm.png"><img src="examples/photos/sunlit-alley-50mm.png" alt="Sunlit alley, 50 mm, Vivid Color, ISO 320" width="49%"></a>
 
-<a href="examples/photos/misty-courtyard-16mm.png"><img src="examples/photos/misty-courtyard-16mm.png" alt="Misty courtyard at 16 mm" width="49%"></a> <a href="examples/photos/monochrome-portrait-200mm.png"><img src="examples/photos/monochrome-portrait-200mm.png" alt="Monochrome portrait at 200 mm" width="49%"></a>
+<a href="examples/photos/grainy-bridge-50mm.png"><img src="examples/photos/grainy-bridge-50mm.png" alt="Bridge in the mist, 50 mm, ISO 2500" width="49%"></a> <a href="examples/photos/night-tower-blur-16mm.png"><img src="examples/photos/night-tower-blur-16mm.png" alt="Blurred night tower, 16 mm, Crisp B&amp;W, ISO 100" width="49%"></a>
 
-[View all eleven additional example photos](examples/README.md#additional-example-photos).
+<a href="examples/photos/red-lit-arch-16mm.png"><img src="examples/photos/red-lit-arch-16mm.png" alt="Red-lit arch in the mist, 16 mm, Vivid Slide, ISO 125" width="49%"></a> <a href="examples/photos/misty-courtyard-16mm.png"><img src="examples/photos/misty-courtyard-16mm.png" alt="Misty courtyard, 16 mm, ISO 400" width="49%"></a>
+
+<a href="examples/photos/monochrome-framing-16mm.png"><img src="examples/photos/monochrome-framing-16mm.png" alt="Monochrome architectural framing, 16 mm, Crisp B&amp;W, ISO 400" width="49%"></a> <a href="examples/photos/monochrome-portrait-200mm.png"><img src="examples/photos/monochrome-portrait-200mm.png" alt="Monochrome portrait, 200 mm" width="49%"></a>
 
 ## Credits
 
