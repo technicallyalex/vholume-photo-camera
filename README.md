@@ -2,7 +2,7 @@
 
 A photography mod for VHOLUME with an optical viewfinder, dedicated controller controls, and modifier-plus-scrollwheel adjustments for the camera's core settings.
 
-**v1.1** brings full-resolution PNG, HDR EXR and DNG photography, an eight-photo background RAW queue, exposure modes and Auto ISO, and matching features on Windows and Linux/Proton. The v1.1.0 release is prepared for approval; downloads below are the current public v1.0.2 builds.
+**v1.1** brings full-resolution PNG, HDR EXR and DNG photography, an eight-photo background RAW queue, exposure modes and Auto ISO, and matching features on Windows and Linux/Proton. [Download v1.1.0](https://github.com/technicallyalex/vholume-photo-camera/releases/tag/v1.1.0).
 
 ![Conapt city overlook through the v1.1 optical viewfinder](examples/viewfinder-optical.png)
 
@@ -69,14 +69,14 @@ Studio groups Photos, Lens, Film, Frame, Exposure and Subjects into consistent p
 
 ## Downloads and installation
 
-The **v1.1.0 Windows and Linux packages are prepared together**. Linux includes the same camera and capture features, with a bundled native DNG converter; users do not need a .NET installation.
+The **v1.1.0 Windows and Linux packages are available together**. Linux includes the same camera and capture features, with a bundled native DNG converter; users do not need a .NET installation.
 
-Current public builds, retained while v1.1 awaits approval:
+| Platform | Current build | Downloads | Status |
+| --- | --- | --- | --- |
+| Windows | **v1.1.0** | [Installer](https://github.com/technicallyalex/vholume-photo-camera/releases/download/v1.1.0/VHOLUME-Photo-Camera-v1.1.0-Windows-Installer.zip) / [Manual ZIP](https://github.com/technicallyalex/vholume-photo-camera/releases/download/v1.1.0/VHOLUME-Photo-Camera-v1.1.0-Windows-Manual.zip) | In-game Windows QA |
+| Linux / Proton | **v1.1.0** | [Linux installer package](https://github.com/technicallyalex/vholume-photo-camera/releases/download/v1.1.0/VHOLUME-Photo-Camera-v1.1.0-Linux-Proton.zip) | Experimental; automated Linux QA |
 
-| Platform | Build | Downloads |
-| --- | --- | --- |
-| Windows | v1.0.2 | [Installer](https://github.com/technicallyalex/vholume-photo-camera/releases/download/v1.0.2/VHOLUME-Photo-Camera-v1.0.2-Windows-Installer.zip) / [Manual ZIP](https://github.com/technicallyalex/vholume-photo-camera/releases/download/v1.0.2/VHOLUME-Photo-Camera-v1.0.2-Windows-Manual.zip) |
-| Linux / Proton | v1.0.2-linux.2 | [Linux package](https://github.com/technicallyalex/vholume-photo-camera/releases/download/v1.0.2/VHOLUME-Photo-Camera-v1.0.2-linux.2-Linux-Proton.zip) |
+[Release notes and checksums](https://github.com/technicallyalex/vholume-photo-camera/releases/tag/v1.1.0) / [Earlier releases](https://github.com/technicallyalex/vholume-photo-camera/releases). Choose the package for your operating system; previous versions remain available.
 
 **Windows:** close the game, extract the installer, and run **Install Photo Camera.cmd**. It finds the Steam installation, installs the bundled UE4SS loader if needed, and backs up a previous mod. Manual installation and rollback are covered in the [guide](GUIDE.md#install-and-switch-back).
 
