@@ -96,6 +96,14 @@ Windows was tested in the actual game, including all seven output combinations, 
 
 <img src="examples/concrete-85mm.png" alt="Black-and-white concrete detail at 85 mm" width="46%"> <img src="examples/portrait-135mm.png" alt="Character portrait at 135 mm" width="46%">
 
+Additional photographs, including sunlit architecture, misty courtyards, grain and monochrome work:
+
+<a href="examples/photos/golden-city-16mm.png"><img src="examples/photos/golden-city-16mm.png" alt="Sunlit city architecture at 16 mm" width="49%"></a> <a href="examples/photos/sunlit-arch-50mm.png"><img src="examples/photos/sunlit-arch-50mm.png" alt="Sunlit arch at 50 mm" width="49%"></a>
+
+<a href="examples/photos/misty-courtyard-16mm.png"><img src="examples/photos/misty-courtyard-16mm.png" alt="Misty courtyard at 16 mm" width="49%"></a> <a href="examples/photos/monochrome-portrait-200mm.png"><img src="examples/photos/monochrome-portrait-200mm.png" alt="Monochrome portrait at 200 mm" width="49%"></a>
+
+[View all eleven additional example photos](examples/README.md#additional-example-photos).
+
 ## Credits
 
 Camera RAW support was inspired by [NewBarkTownKris](https://github.com/NewBarkTownKris) and their [Denshattack! Photo Camera](https://github.com/NewBarkTownKris/denshattack-photo-camera).

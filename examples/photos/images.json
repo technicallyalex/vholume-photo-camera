@@ -1,0 +1,106 @@
+{
+  "source": "User-supplied example photographs",
+  "originals_preserved": true,
+  "processing": "None; original PNG bytes copied without edits or resizing",
+  "images": [
+    {
+      "file": "stacked-concrete-50mm.png",
+      "original_filename": "VHOLUME_20261114_224041_002_50mm_neutral_ISO100_3x2.png",
+      "caption": "Stacked concrete detail, 50 mm, Neutral, ISO 100",
+      "width": 2760,
+      "height": 1840,
+      "bytes": 4721015,
+      "sha256": "e3e27c51853f32b26fec4408f02e51f357b6a208c4a6ce6e473079c88e762b10"
+    },
+    {
+      "file": "sunlit-arch-50mm.png",
+      "original_filename": "VHOLUME_20261111_005826_058_50mm_vivid-color_ISO320_3x2.png",
+      "caption": "Sunlit arch, 50 mm, Vivid Color, ISO 320",
+      "width": 2856,
+      "height": 1904,
+      "bytes": 6685619,
+      "sha256": "69826329fdf530da32036b020cd9d7107ce29106e01cf7c590835f845a41c1b3"
+    },
+    {
+      "file": "golden-city-16mm.png",
+      "original_filename": "VHOLUME_20261111_005133_051_16mm_vivid-color_ISO320_3x2.png",
+      "caption": "Golden city architecture, 16 mm, Vivid Color, ISO 320",
+      "width": 2856,
+      "height": 1904,
+      "bytes": 8859979,
+      "sha256": "8cd65a581cd190dd85400372b3d5870f7a1f81bf1f693bd5a00fce53aa4f3e78"
+    },
+    {
+      "file": "tower-detail-85mm.png",
+      "original_filename": "VHOLUME_20261111_004831_048_85mm_vivid-color_ISO320_3x2.png",
+      "caption": "Tower detail with soft foreground, 85 mm, Vivid Color, ISO 320",
+      "width": 2856,
+      "height": 1904,
+      "bytes": 7931506,
+      "sha256": "5f226510c7fa746a29f75d06893250ca53c61bae757054a2407cdfc3132d5dcf"
+    },
+    {
+      "file": "sunlit-alley-50mm.png",
+      "original_filename": "VHOLUME_20261111_004656_046_50mm_vivid-color_ISO320_3x2.png",
+      "caption": "Sunlit alley, 50 mm, Vivid Color, ISO 320",
+      "width": 2856,
+      "height": 1904,
+      "bytes": 4653795,
+      "sha256": "3f1b9139c7be94a3fb37fa97e925221601ff68683a8a8970ff5bffa7b34e8f02"
+    },
+    {
+      "file": "grainy-bridge-50mm.png",
+      "original_filename": "VHOLUME_20261111_004313_037_50mm_fast-color_ISO2500_3x2.png",
+      "caption": "Bridge in the mist, 50 mm, ISO 2500",
+      "width": 2856,
+      "height": 1904,
+      "bytes": 7118199,
+      "sha256": "3cba1334128f824a0f93bc12565be94955cae249ef994da452cd4623ba6fa356"
+    },
+    {
+      "file": "night-tower-blur-16mm.png",
+      "original_filename": "VHOLUME_20261111_003943_035_16mm_crisp-bw_ISO100_3x2.png",
+      "caption": "Blurred night tower, 16 mm, Crisp B&W, ISO 100",
+      "width": 2856,
+      "height": 1904,
+      "bytes": 2031616,
+      "sha256": "62968472b04ac8479b4f4bbb0fa37494cbbfb9230058bb7bfcc198ca0f15212a"
+    },
+    {
+      "file": "red-lit-arch-16mm.png",
+      "original_filename": "VHOLUME_20261111_003305_026_16mm_vivid-slide_ISO125_3x2.png",
+      "caption": "Red-lit arch in the mist, 16 mm, Vivid Slide, ISO 125",
+      "width": 2856,
+      "height": 1904,
+      "bytes": 3363620,
+      "sha256": "a93fb552c2e73bdfd931641b477f6ab2a838cd59ece2a0cc0e4fdc5a37cc383e"
+    },
+    {
+      "file": "misty-courtyard-16mm.png",
+      "original_filename": "VHOLUME_20261111_002306_017_16mm_fast-color_ISO400_3x2.png",
+      "caption": "Misty courtyard, 16 mm, ISO 400",
+      "width": 2856,
+      "height": 1904,
+      "bytes": 7342438,
+      "sha256": "81db94f28d7c8f56a335b62d7fd3beaaf244dea6bc0fae13b205a2054bc0ecde"
+    },
+    {
+      "file": "monochrome-framing-16mm.png",
+      "original_filename": "VHOLUME_20261111_002028_014_16mm_crisp-bw_ISO400_3x2.png",
+      "caption": "Monochrome architectural framing, 16 mm, Crisp B&W, ISO 400",
+      "width": 2856,
+      "height": 1904,
+      "bytes": 2576273,
+      "sha256": "a5b40267232881a0fa3d4cf99199f406c54a10a4fa44cbe5720d66ac0a67f011"
+    },
+    {
+      "file": "monochrome-portrait-200mm.png",
+      "original_filename": "VHOLUME_20261108_214318_003_200mm_tmax_4x3.png",
+      "caption": "Monochrome portrait, 200 mm",
+      "width": 2280,
+      "height": 1710,
+      "bytes": 2235040,
+      "sha256": "22747eca51a60ffa410d7c042de2f8e2b967771ae177d999d65eef49a4d26b66"
+    }
+  ]
+}
