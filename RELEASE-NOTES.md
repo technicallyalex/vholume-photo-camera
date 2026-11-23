@@ -1,16 +1,11 @@
-# VHOLUME Photo Camera v1.0.3-alpha.1 - Controls preview
+# VHOLUME Photo Camera v1.0.3-alpha.2 - Capture preview
 
-All keybinds start at their defaults in a separate preview profile. Exposure options and aim-scaling preferences are retained, and previous profiles remain available for rollback.
+- Full-frame scene rendering replaces the HUD screenshot crop for every photo.
+- PNG, linear HDR EXR, and paired PNG + EXR output under Studio > Photos > Output Settings.
+- EXR retains floating-point highlight data before tone mapping, without film grading or artificial grain. Optics, depth of field, exposure, and camera motion remain rendered.
+- Image long-edge presets from 1280 to 7680 pixels, plus game resolution. Exact selected aspect ratio and portrait orientation are preserved; the panel shows actual output dimensions.
+- Dedicated render keeps gameplay resolution unchanged. Switch game resolution temporarily changes the game window and restores both the original running viewport/display mode and the original video-setting values. Capture completion waits for restoration. Cancellation and export failure trigger cleanup too.
+- Small JSON sidecars record photo settings.
+- Existing 5 camera / 6 Studio / right-click finder / Enter Studio controls are retained.
 
-| Input | Action |
-| --- | --- |
-| 5 | Toggle camera mode without automatically opening Studio |
-| 6 | Open Studio, including when the camera is stowed; go back within Studio |
-| Right mouse | Raise/lower the finder in camera mode; open the finder directly from Studio |
-| Enter | Select the focused Studio control or use the selected card |
-
-Returning from Studio with right-click keeps an already raised finder open. Studio's footer now shows Enter, 6, and the viewfinder shortcut consistently. The old hidden F9 equip shortcut is removed; F9 can be assigned explicitly through Keybinds.
-
-Verified in a native Steam game session with simulated key states, including initial activation, Studio entry from a stowed camera, returning from a raised finder, keybind-page exit, pause-menu blocking, and controller View/LT behavior. Physical controller hardware was not used.
-
-This is a local Windows preview; the published Windows and Linux releases remain available separately.
+This is a local Windows preview. Published Windows and Linux downloads are unchanged. See QA.txt in the build folder for verified cases and remaining limits.

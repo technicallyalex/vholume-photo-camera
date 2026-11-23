@@ -35,7 +35,7 @@ def main():
     root = Path(__file__).resolve().parents[1]
     mod = root / 'ue4ss/Mods/VHOLUMEPhotoCamera'
     files = sorted(p for p in mod.rglob('*') if p.is_file())
-    assert len(files) == 102, 'Unexpected release payload'
+    assert len(files) == 105, 'Unexpected release payload'
     assert not any(p.is_symlink() or p.suffix.lower() not in ('.lua', '.png', '.mp4', '.ps1', '.txt') for p in files)
     assert re.fullmatch(r'\d+\.\d+\.\d+(?:-[A-Za-z0-9.]+)?', args.version)
     assert ('Photo Camera ' + args.version + ' ready') in (mod / 'Scripts/main.lua').read_text(encoding='utf-8')
@@ -47,7 +47,9 @@ def main():
 
     script_path = root / 'installer/Install-Photo-Camera.ps1'
     script = script_path.read_text(encoding='utf-8-sig')
-    script = script.replace('Installing Photo Camera 1.0.2 in', 'Installing Photo Camera ' + args.version + ' in')
+    script, count = re.subn(r'Installing Photo Camera [0-9A-Za-z.-]+ in',
+                            'Installing Photo Camera ' + args.version + ' in', script)
+    assert count == 1
     script, count = re.subn(r"(?m)^\$modHash = '[A-Fa-f0-9]{64}'",
                             lambda _: "$modHash = '" + digest(manual.read_bytes()) + "'", script)
     assert count == 1

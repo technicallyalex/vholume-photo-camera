@@ -1,6 +1,6 @@
 # VHOLUME Photo Camera Guide
 
-**Version 1.0.3-alpha.1** / Windows controls preview
+**Version 1.0.3-alpha.2** / Windows capture preview
 
 A complete camera controls overhaul introduces a dedicated controller layout and controls using modifier keys and the scroll wheel for focus, exposure, lenses, film looks, and framing. Shortcuts appear beside their settings in the viewfinder. See [Keyboard and mouse](#keyboard-and-mouse) and [Controller](#controller) for the layouts.
 
@@ -30,6 +30,18 @@ In Photo Studio, select **Photos > Choose Folder** to open the Windows folder ch
 
 The Exposure card has a rotating low-poly +/- model. The exposure settings show a short hint for the hovered or focused control, with the selected mode as the default.
 
+## Full-resolution photos and HDR output
+
+Open **Studio > Photos > Output Settings**. Choose **PNG**, **EXR**, or **PNG + EXR**. PNG includes the selected film simulation and ISO grain. EXR is a 16-bit floating-point linear HDR image before the tone curve, with film grading and artificial grain removed. Focus, aperture, DOF multiplier, exposure, and intentional camera motion remain rendered into the image; those effects cannot be undone as if this were sensor RAW data. A small JSON sidecar records the capture settings.
+
+Use an editor that supports OpenEXR. Interpret the EXR as linear sRGB / Rec.709 primaries with a D65 white point; apply a display transform or tone mapping for viewing. An unprocessed EXR can look different from the PNG. Exposure and highlight adjustments can use values above display white. The mod does not convert a PNG into HDR or DNG. [Unreal HDR capture and export](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/ImageWriteBlueprintLibrary?application_version=5.4)
+
+**Resolution / Long Edge** offers the game's resolution or 1280, 1920, 2560, 3840, 5760, and 7680 pixels. The exact dimensions appear below the controls. They are rounded down slightly when needed to preserve the exact aspect ratio, including 21:9, 65:24, and portrait orientations. Game resolution uses the game viewport's full long edge, not the smaller viewfinder rectangle. Every photo is rendered directly at its output size; no capture is cropped from the HUD screenshot or enlarged from a smaller screenshot.
+
+**Dedicated render** is recommended. It renders only the photo at the chosen size, keeping gameplay resolution unchanged. **Switch game resolution** temporarily switches the live game to a window at the photo dimensions, captures, then restores the original running resolution and display mode. It also restores the original video-setting values, which can differ from the current window when launch overrides are in use. The mod does not save or confirm video settings. Capture completion waits for the original viewport to return. Cancellation, menus, and save errors also trigger restoration. If a requested window size cannot be applied, the shot is canceled; select Dedicated render for sizes your display cannot accommodate.
+
+Large captures require more GPU memory and preparation time. This is a Windows preview. The existing Linux/Proton package has not been updated for these capture features.
+
 ## Exposure
 
 Press **5** for camera mode or **6** for Photo Studio. **6** can open Studio even when the camera is stowed. Controller **View** retains its existing Studio entry. Select **Exposure > Edit Exposure** to change exposure settings.
@@ -49,9 +61,9 @@ Enable **Auto ISO** to set minimum and maximum sensitivity. Aperture Priority pr
 
 Raise the finder in **M** or **S** and set the shutter to **1/15 s or slower**. **Alt + wheel down** or **LB + D-pad left** slows the shutter. **A** also records motion when it meters a shutter speed in that range.
 
-Press **left-click** or **RT** once, then walk or pan while the finder shows **EXPOSING**. The mod locks focus and exposure at the start and blends scene samples as the camera moves. The completed photo saves as one PNG. Lower the finder or stow the camera to cancel an exposure. Game mode and faster shutter speeds use the instant capture path.
+Press **left-click** or **RT** once, then walk or pan while the finder shows **EXPOSING**. The mod locks focus and exposure at the start and blends scene samples as the camera moves. The completed photo saves in the selected PNG, EXR, or paired format. Lower the finder or stow the camera to cancel an exposure. Game mode and faster shutter speeds use a single-frame scene render after a short preparation period.
 
-Motion captures keep the selected aspect ratio and use up to 3840 pixels along the longer edge. Sample density depends on the game's frame rate. [Unreal Engine scene capture documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/rendering-components-in-unreal-engine)
+Motion captures keep the selected aspect ratio and use the resolution selected in Output Settings. Sample density depends on the game's frame rate. [Unreal Engine scene capture documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/rendering-components-in-unreal-engine)
 
 ## Keyboard and mouse
 

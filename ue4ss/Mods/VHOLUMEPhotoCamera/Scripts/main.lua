@@ -23,6 +23,8 @@ local studioCards = { "photos", "lens", "film", "frame", "exposure", "subjects" 
 local lensCard, frameCard, exposureCard = 2, 4, 5
 local assetPath = scriptPath .. "../Assets/"
 local photos = dofile(scriptPath .. "photo_folder.lua")(scriptPath)
+local captureConfig = dofile(scriptPath .. "capture_settings.lua")()
+local imageFile = dofile(scriptPath .. "image_file.lua")
 
 local function log(message)
     print("[VHOLUME Photo] " .. tostring(message) .. "\n")
@@ -67,6 +69,7 @@ local function load(path)
 end
 
 local ue = { valid = valid, object = object, call = call, load = load }
+local captureResolution = dofile(scriptPath .. "capture_resolution.lua")(ue,log)
 local binds = dofile(scriptPath .. "bindings.lua")(ue, log, exposure)
 local cameraInput = dofile(scriptPath .. "camera_input.lua")(ue,binds)
 local pad = dofile(scriptPath .. "gamepad.lua")(ue, binds)
@@ -376,7 +379,7 @@ local function refreshStudio(active)
     local x,y = film.ratio(settings.frame,portrait)
     local orientation = x == y and "Square frame" or (portrait and "Portrait" or "Landscape")
     active.studio.update(active.studioCard,{
-        photos={"Photo output",photos.caption(),"folder"},
+        photos={captureConfig.formats[captureConfig.format],photos.caption(),"folder"},
         lens={string.format("%d mm",lenses[lensIndex]),"Focal length","lens"..lenses[lensIndex],binds.aimScaling()},
         film={stock[1],stock[3],stock[2]},
         frame={x..":"..y,x==y and orientation or frame[1].." / "..orientation,
@@ -389,17 +392,19 @@ end
 local function buildOptions(active, rect)
     local focused
     if active.studio then
-        if active.studioKeyPage == active.keyPage and active.studioExposurePage == active.exposurePage then
+        if active.studioKeyPage == active.keyPage and active.studioExposurePage == active.exposurePage
+                and active.studioOutputPage == active.outputPage then
             focused = active.studio.focused()
         end
         active.studio.close()
     end
     active.studio = buildStudio(ue,active.pc,rect,assetPath,binds,studioCards,active.keyPage,active.raised,
-        active.exposurePage, exposure)
+        active.exposurePage, exposure, active.outputPage, captureConfig)
     active.studioKeyPage = active.keyPage
     if focused then active.studio.focus(focused.action,focused.step,focused.card) end
     active.studioRect = rect
     active.studioExposurePage = active.exposurePage
+    active.studioOutputPage = active.outputPage
     refreshStudio(active)
 end
 
@@ -410,6 +415,7 @@ local function closeStudio(active)
     active.studioRect = nil
     active.studioKeyPage = nil
     active.exposurePage, active.studioExposurePage = nil,nil
+    active.outputPage, active.studioOutputPage = nil,nil
     active.keyPage, active.keyCapture, active.keyNotice, active.keyReset = nil,nil,nil,nil
     setStudioCursor(active,false)
     setStudioInput(active,false)
@@ -437,16 +443,18 @@ local function openPhotos(active)
 end
 
 local function releaseMotion(shot)
+    captureResolution.restore(shot)
     local ok, err = pcall(motion.release,shot)
     if not ok then log("Exposure cleanup: " .. tostring(err)) end
 end
 
 local function abortMotion(active, message)
     local shot = pending
-    if not shot or not shot.duration or shot.owner ~= active then return end
+    if not shot or shot.owner ~= active then return end
     pending = nil
     releaseMotion(shot)
-    if shot.exportStarted then os.remove(shot.partPath) end
+    if shot.partPath then os.remove(shot.partPath) end
+    if shot.exrPartPath then os.remove(shot.exrPartPath) end
     if message then updateLabels(active,message) end
 end
 
@@ -652,93 +660,100 @@ local function adjustOptics(effect, direction)
     end
 end
 
-local function pngDimensions(path)
-    local file = io.open(path, "rb")
-    if not file then return end
-    local head = file:read(33)
-    if head and #head == 33 and head:sub(1, 16) == "\137PNG\13\10\26\10\0\0\0\13IHDR" then
-        -- Unreal's exporter can pad the file after IEND.
-        local hasImageData = false
-        while true do
-            local header = file:read(8)
-            if not header or #header ~= 8 then break end
-            local size, kind = string.unpack(">I4c4",header)
-            if kind == "IEND" then
-                local crc = size == 0 and file:read(4)
-                file:close()
-                if hasImageData and crc == "\174\66\96\130" then
-                    local width, height = string.unpack(">I4I4",head,17)
-                    return width, height
-                end
-                return
-            end
-            if kind == "IDAT" and size > 0 then hasImageData = true end
-            if not file:seek("cur",size+4) then break end
-        end
-    end
-    file:close()
-end
-
-local function finishShot(shot, tries)
+local function finishShot(shot)
     if pending ~= shot then return end
-    local width, height = pngDimensions(shot.path)
-    if not width and tries > 0 then
-        ExecuteInGameThreadWithDelay(250, function() finishShot(shot, tries - 1) end)
-        return
+    local good=true
+    if shot.png then
+        local w,h=imageFile.png(shot.path)
+        good=w==shot.width and h==shot.height
     end
-    pending = nil
-    local good = width == shot.width and height == shot.height
-    if good then log("Saved " .. shot.path)
-    else log("Photo did not finish with the expected frame: " .. shot.path) end
-    if state == shot.owner and not state.stowAt then
-        local message = good and "PHOTO SAVED" or "PHOTO SAVE FAILED"
-        if state.studio and not state.keyPage then
-            state.studio.notice(message)
-        elseif good and not state.menuOpen then
-            present(state, "saved", message)
-        else
-            updateLabels(state, message)
-        end
+    if shot.exr then
+        local w,h=imageFile.exr(shot.exrPath)
+        good=good and w==shot.width and h==shot.height
+    end
+    pending=nil
+    log((good and "Saved " or "Photo validation failed: ")..shot.base)
+    if state==shot.owner and not state.stowAt then
+        updateLabels(state,good and "PHOTO SAVED" or "PHOTO SAVE FAILED")
     end
 end
 
-local function motionFailed(shot, reason)
-    log("Motion exposure: " .. tostring(reason))
-    abortMotion(shot.owner,"EXPOSURE FAILED")
+local function motionFailed(shot,reason)
+    log("Photo capture: "..tostring(reason))
+    abortMotion(shot.owner,tostring(reason):find("Game could not apply",1,true)
+        and "USE DEDICATED RENDER" or "PHOTO CAPTURE FAILED")
 end
 
-local function tickMotion(shot, now)
-    local active = shot.owner
-    local ok, reason = pcall(function()
-        local done, remaining = motion.tick(shot,now)
-        if done or now >= (shot.checkAt or 0) then
-            shot.checkAt = now + .25
-            local current = gate(active.pc,active.portrait)
-            if current.width ~= active.rect.width or current.height ~= active.rect.height
-                    or current.dpi ~= active.rect.dpi then
-                abortMotion(active)
-                rebuildOverlay(active,current)
-                updateLabels(active,"EXPOSURE CANCELLED")
-                return
-            end
-        end
-        if not done then
-            local seconds = math.ceil(remaining * 10)
-            if seconds ~= shot.remaining then
-                active.ui.setNotice(string.format("EXPOSING  %.1f s",seconds / 10),now)
-                shot.remaining = seconds
-            end
+local function tickMotion(shot,now)
+    local active=shot.owner
+    local ok,reason=pcall(function()
+        if shot.saved then
+            assert(not shot.restoreFailed,"Game viewport restoration failed")
+            if captureResolution.restored(shot) then finishShot(shot) end
             return
         end
-        shot.exportStarted = true
+        if shot.waitResolution then
+            local current=gate(active.pc,active.portrait)
+            if current.width~=shot.width or current.height~=shot.height then
+                assert(now-shot.requestedAt<5,"Game could not apply this resolution; use Dedicated render")
+                return
+            end
+            shot.waitResolution=nil
+            shot.startAt=now+.25
+            return
+        end
+        if not shot.actor then
+            if shot.startAt and now<shot.startAt then return end
+            motion.start(shot,shot.rect)
+            shot.warmUntil=now+.15;shot.warmFrames=0
+            return
+        end
+        if shot.warmUntil then
+            motion.warmup(shot)
+            shot.warmFrames=shot.warmFrames+1
+            if shot.warmFrames<4 or now<shot.warmUntil then return end
+            shot.warmUntil=nil;shot.startedAt=now;shot.accumulated=0
+            return
+        end
+        if shot.duration>0 then
+            local done,remaining=motion.tick(shot,now)
+            if not done then
+                active.ui.setNotice(string.format("EXPOSING  %.1f s",remaining),now)
+                return
+            end
+        end
+        shot.exportStarted=true
         motion.save(shot)
-        local width, height = pngDimensions(shot.partPath)
-        assert(width == shot.width and height == shot.height,"Invalid motion exposure PNG")
-        assert(os.rename(shot.partPath,shot.path))
+        -- Validate both temporary files before publishing either output.
+        if shot.png then
+            local w,h=imageFile.png(shot.partPath)
+            assert(w==shot.width and h==shot.height,"Invalid rendered PNG")
+        end
+        if shot.exr then
+            local w,h=imageFile.exr(shot.exrPartPath)
+            assert(w==shot.width and h==shot.height,"Invalid linear HDR EXR")
+        end
+        if shot.png then assert(os.rename(shot.partPath,shot.path)) end
+        if shot.exr then
+            local renamed,err=os.rename(shot.exrPartPath,shot.exrPath)
+            if not renamed then
+                if shot.png then os.remove(shot.path) end
+                error(err)
+            end
+        end
+        local metadata=io.open(shot.base..".json","wb")
+        if metadata then
+            metadata:write(string.format('{"build":"1.0.3-alpha.2","width":%d,"height":%d,"focalLengthMm":%d,"iso":%d,"aperture":%.3f,"shutterSeconds":%.6f,"film":"%s","exr":"linear HDR, no film simulation or grain","method":"%s"}\n',
+                shot.width,shot.height,shot.focalLength,shot.iso,shot.aperture,shot.shutterSeconds,
+                shot.film,shot.method))
+            metadata:close()
+        end
         releaseMotion(shot)
-        log(string.format("Motion exposure %.3f s, %d samples",shot.duration,shot.samples))
+        log(string.format("Full-frame render %dx%d, %d samples",shot.width,shot.height,shot.samples))
         active.ui.playEffect("shutter",now)
-        finishShot(shot,0)
+        shot.saved=true
+        if captureResolution.restored(shot) then finishShot(shot)
+        else active.ui.setNotice("RESTORING VIDEO SETTINGS",now) end
     end)
     if not ok then motionFailed(shot,reason) end
 end
@@ -765,37 +780,35 @@ local function shutter()
         return
     end
     if not photos.prepare() then updateLabels(active,"PHOTO FOLDER IS NOT WRITABLE"); return end
-    local dir = photoDirectory()
-    local path
+    local dir=photoDirectory()
+    local base
     repeat
-        shotNumber = shotNumber + 1
-        path = string.format("%sVHOLUME_%s_%03d_%dmm_%s_ISO%d_%dx%d.png", dir,
-            os.date("%Y%m%d_%H%M%S"), shotNumber, lenses[lensIndex],
-            film.stocks[active.stock][2]:gsub("%-%d+$",""), active.exposure.iso,
-            current.columns,current.rows)
-        local file = io.open(path, "rb") or io.open(path:gsub("%.png$",".part.png"),"rb")
-        if file then file:close() else break end
+        shotNumber=shotNumber+1
+        base=string.format("%sVHOLUME_%s_%03d_%dmm_%s_ISO%d_%dx%d",dir,
+            os.date("%Y%m%d_%H%M%S"),shotNumber,lenses[lensIndex],
+            film.stocks[active.stock][2]:gsub("%-%d+$",""),active.exposure.iso,current.columns,current.rows)
+        local exists=false
+        for _,suffix in ipairs({".png",".exr",".part.png",".part.exr",".json"}) do
+            local file=io.open(base..suffix,"rb")
+            if file then file:close();exists=true end
+        end
+        if not exists then break end
     until false
-    local shot = { path = path, width = current.w, height = current.h, owner = active }
-    if exposure.mode ~= 1 and active.exposure.speed <= 15 then
-        shot.duration = 1 / active.exposure.speed
-        shot.partPath = path:gsub("%.png$",".part.png")
-        shot.width, shot.height = motion.dimensions(current)
-        shot.startedAt, shot.accumulated = now, 0
-        pending = shot
-        local ok, reason = pcall(motion.start,shot,current)
-        if not ok then motionFailed(shot,reason); return end
-        audio.play(active,"shutter",now)
-        active.ui.pulseControl("shoot",now)
-        active.ui.setNotice("EXPOSING",now)
-        return
-    end
-    local command = string.format('HighResShot filename="%s" 1 %d %d %d %d 0 0 0 0',
-        path, current.x, current.y, current.w, current.h)
-    system():ExecuteConsoleCommand(active.pc, command, active.pc)
-    pending = shot
-    present(active, "shutter")
-    ExecuteInGameThreadWithDelay(250, function() finishShot(shot, 11) end)
+    local width,height=captureConfig.dimensions(current)
+    local shot={base=base,path=base..".png",partPath=base..".part.png",
+        exrPath=base..".exr",exrPartPath=base..".part.exr",width=width,height=height,
+        owner=active,rect=current,png=captureConfig.format~=2,exr=captureConfig.format~=1,
+        duration=exposure.mode~=1 and active.exposure.speed<=15 and 1/active.exposure.speed or 0,
+        requestedAt=now,focalLength=lenses[lensIndex],iso=active.exposure.iso,
+        aperture=active.exposure.aperture,shutterSeconds=1/active.exposure.speed,
+        film=film.stocks[active.stock][1],method=captureConfig.methods[captureConfig.method]}
+    pending=shot
+    local ok,reason=pcall(captureResolution.begin,shot,captureConfig)
+    if not ok then motionFailed(shot,reason);return end
+    audio.play(active,"shutter",now)
+    active.ui.pulseControl("shoot",now)
+    active.ui.setNotice(shot.waitResolution and "SETTING PHOTO RESOLUTION" or "PREPARING PHOTO",now)
+
 end
 
 local function guarded(action)
@@ -975,6 +988,28 @@ local function keybindTick(active, now, target)
     refreshStudio(active)
 end
 
+local function studioOutput(active,target,pressed)
+    if (target and target.action=="outputBack") or pad.pressed.b then
+        active.outputPage=nil
+        buildOptions(active,active.studioRect)
+        active.studio.focus("outputOpen",nil,1)
+        return
+    end
+    if pressed.up or pressed.down then
+        active.studio.moveOutputFocus(pressed.up and -1 or 1)
+        return
+    end
+    local direction=target and target.step
+    local focused=target or active.studio.focused()
+    if not target and (pressed.left or pressed.right) then direction=pressed.right and 1 or -1 end
+    if focused and focused.action=="captureStep" and direction then
+        if pending then active.studio.notice("Wait for the photo to finish.");return end
+        local ok=captureConfig.step(focused.card,direction)
+        refreshStudio(active)
+        if not ok then active.studio.notice("Could not save output settings.") end
+    end
+end
+
 local function studioTick(active, now, tab)
     if now >= (active.studioLayoutCheck or 0) then
         active.studioLayoutCheck = now + .25
@@ -1010,7 +1045,7 @@ local function studioTick(active, now, tab)
     if tab ~= nil then
         active.studio.tab(tab)
         local focused = active.studio.focused()
-        if focused.card then
+        if type(focused.card)=="number" then
             active.studioCard = focused.card
             refreshStudio(active)
         end
@@ -1074,6 +1109,16 @@ local function studioTick(active, now, tab)
     end
     if active.exposurePage then
         studioExposure(active,target,pressed)
+        return
+    end
+    if active.outputPage then
+        studioOutput(active,target,pressed)
+        return
+    end
+    if target and target.action=="outputOpen" then
+        active.outputPage=true
+        buildOptions(active,active.studioRect)
+        active.studio.focus("captureStep",-1,"format")
         return
     end
     if pad.pressed.b then closeOptions(active); return end
@@ -1267,9 +1312,11 @@ local function tick()
             local saved = system():GetProjectSavedDirectory():ToString()
             binds.load(saved)
             photos.load(saved)
+            captureConfig.load(saved)
             bindingsLoaded = true
         end
         if bindingsLoaded then
+            captureResolution.poll()
             local message = photos.poll()
             if message then
                 if state and state.studio then refreshStudio(state); state.studio.notice(message)
@@ -1362,6 +1409,10 @@ local function tick()
         end
         local tab = justPressed(tabKey,pc)
         if state and state.studio then
+            if options and state.outputPage then
+                studioOutput(state,{action="outputBack"},{})
+                return
+            end
             if options and state.exposurePage then
                 studioExposure(state,{action="exposureBack"},{})
                 return
@@ -1474,4 +1525,4 @@ else
     LoopInGameThreadWithDelay(1, tick)
 end
 
-log("Photo Camera 1.0.3-alpha.1 ready. Press 5 for camera mode or 6 for Studio.")
+log("Photo Camera 1.0.3-alpha.2 ready. Press 5 for camera mode or 6 for Studio.")

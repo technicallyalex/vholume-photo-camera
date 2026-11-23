@@ -26,6 +26,7 @@ return function(ue, pose)
     local function sample(shot, location, rotation)
         ue.call(actorPath.."K2_SetActorLocationAndRotation",shot.actor,location,rotation,false,{},true)
         ue.call(scenePath.."CaptureScene",shot.capture)
+        if ue.valid(shot.rawCapture) then ue.call(scenePath.."CaptureScene",shot.rawCapture) end
         shot.samples = (shot.samples or 0) + 1
     end
 
@@ -45,6 +46,7 @@ return function(ue, pose)
     end
 
     function motion.start(shot, rect)
+        if shot.png==nil then shot.png=true end -- Earlier platform overlays produce PNG only.
         local active = shot.owner
         local location, rotation = pose(active)
         shot.actor = active.pawn:GetWorld():SpawnActor(ue.object("/Script/Engine.SceneCapture2D"),location,rotation)
@@ -54,29 +56,61 @@ return function(ue, pose)
         shot.capture.bCaptureEveryFrame = false
         shot.capture.bCaptureOnMovement = false
         shot.capture.bAlwaysPersistRenderingState = true
-        shot.capture.CaptureSource = 9 -- SCS_FinalToneCurveHDR, linear output with film look
+        shot.capture.CaptureSource = shot.png and 9 or 8 -- Tone mapped PNG / untonemapped HDR
         shot.capture.PostProcessSettings = active.lens.PostProcessSettings
         shot.capture.PostProcessBlendWeight = 1
         local pp = shot.capture.PostProcessSettings
         -- The exposure itself integrates motion. Avoid blurring each sample twice.
         pp.bOverride_MotionBlurAmount = true
         pp.MotionBlurAmount = 0
+        local function neutral(component)
+            local raw = component.PostProcessSettings
+            for _,field in ipairs({"ColorSaturation","ColorContrast","ColorGamma","ColorGain"}) do
+                raw["bOverride_"..field]=true
+                raw[field]={X=1,Y=1,Z=1,W=1}
+            end
+            raw.bOverride_ColorOffset=true;raw.ColorOffset={X=0,Y=0,Z=0,W=0}
+            raw.bOverride_FilmGrainIntensity=true;raw.FilmGrainIntensity=0
+            raw.bOverride_ColorGradingIntensity=true;raw.ColorGradingIntensity=0
+        end
+        if not shot.png then neutral(shot.capture) end
         local tangent = math.tan(math.rad(active.lens.FieldOfView) / 2) * rect.w / rect.fullWidth
         shot.capture.FOVAngle = math.deg(2 * math.atan(tangent * math.max(1,rect.h/rect.w)))
         ue.call("/Script/Engine.SceneCaptureComponent:HideActorComponents",shot.capture,active.pawn,true)
         shot.sampleTarget = target(shot,6) -- RTF_RGBA16f
         shot.capture.TextureTarget = shot.sampleTarget
-        shot.sumTarget = target(shot,6)
         -- A dormant component keeps the accumulator reachable by Unreal's GC.
-        local holder = ue.call(actorPath.."AddComponentByClass",shot.actor,
-            ue.object(captureClass),true,identity,true)
-        assert(ue.valid(holder), "Cannot retain exposure render target")
-        holder.bCaptureEveryFrame = false
-        holder.bCaptureOnMovement = false
-        holder.TextureTarget = shot.sumTarget
-        ue.call(actorPath.."FinishAddComponent",shot.actor,holder,true,identity)
-        ue.object(rendering):ClearRenderTarget2D(active.pc,shot.sumTarget,black)
+        local function retain(rt)
+            local holder=ue.call(actorPath.."AddComponentByClass",shot.actor,ue.object(captureClass),false,identity,true)
+            assert(ue.valid(holder),"Cannot retain photo render target")
+            holder.bCaptureEveryFrame=false;holder.bCaptureOnMovement=false;holder.TextureTarget=rt
+            ue.call(actorPath.."FinishAddComponent",shot.actor,holder,false,identity)
+            return holder
+        end
+        if shot.duration>0 then
+            shot.sumTarget=target(shot,6);retain(shot.sumTarget)
+            ue.object(rendering):ClearRenderTarget2D(active.pc,shot.sumTarget,black)
+        end
+        if shot.png and shot.exr then
+            shot.rawTarget=target(shot,6)
+            shot.rawCapture=retain(shot.rawTarget)
+            shot.rawCapture.bAlwaysPersistRenderingState=true
+            shot.rawCapture.CaptureSource=8
+            shot.rawCapture.FOVAngle=shot.capture.FOVAngle
+            shot.rawCapture.PostProcessSettings=shot.capture.PostProcessSettings
+            shot.rawCapture.PostProcessBlendWeight=1
+            neutral(shot.rawCapture)
+            ue.call("/Script/Engine.SceneCaptureComponent:HideActorComponents",shot.rawCapture,active.pawn,true)
+            if shot.duration>0 then
+                shot.rawSumTarget=target(shot,6);retain(shot.rawSumTarget)
+                ue.object(rendering):ClearRenderTarget2D(active.pc,shot.rawSumTarget,black)
+            end
+        end
         sample(shot,location,rotation)
+    end
+
+    function motion.warmup(shot)
+        sample(shot,pose(shot.owner))
     end
 
     function motion.tick(shot, now)
@@ -84,6 +118,7 @@ return function(ue, pose)
         local dt = elapsed - shot.accumulated
         if dt > 0 and (elapsed == shot.duration or dt >= sampleInterval) then
             draw(shot,shot.sampleTarget,shot.sumTarget,dt/shot.duration,3) -- BLEND_Additive
+            if shot.rawTarget then draw(shot,shot.rawTarget,shot.rawSumTarget,dt/shot.duration,3) end
             shot.accumulated = elapsed
             if elapsed < shot.duration then sample(shot,pose(shot.owner)) end
         end
@@ -91,20 +126,31 @@ return function(ue, pose)
     end
 
     function motion.save(shot)
-        shot.outputTarget = target(shot,3) -- RTF_RGBA8_SRGB
-        draw(shot,shot.sumTarget,shot.outputTarget,1,0)
-        local dir, file = shot.partPath:match("^(.*)[/\\]([^/\\]+)$")
-        assert(dir and file, "Invalid exposure output path")
-        ue.object(rendering):ExportRenderTarget(shot.owner.pc,shot.outputTarget,dir,file)
+        local source=shot.sumTarget or shot.sampleTarget
+        if shot.png then
+            shot.outputTarget = target(shot,3) -- RTF_RGBA8_SRGB
+            draw(shot,source,shot.outputTarget,1,0)
+            local dir,file=shot.partPath:match("^(.*)[/\\]([^/\\]+)$")
+            assert(dir and file,"Invalid photo output path")
+            ue.object(rendering):ExportRenderTarget(shot.owner.pc,shot.outputTarget,dir,file)
+        end
+        if shot.exr then
+            local raw=shot.rawSumTarget or shot.rawTarget or source
+            local lib=ue.object("/Script/ImageWriteQueue.Default__ImageWriteBlueprintLibrary")
+            ue.call("/Script/ImageWriteQueue.ImageWriteBlueprintLibrary:ExportToDisk",lib,raw,shot.exrPartPath,
+                {Format=3,CompressionQuality=0,bOverwriteFile=false,bAsync=false})
+        end
     end
 
     function motion.release(shot)
         if ue.valid(shot.actor) then ue.call(actorPath.."K2_DestroyActor",shot.actor) end
         local lib = ue.object(rendering)
-        for _,rt in pairs({shot.sampleTarget,shot.sumTarget,shot.outputTarget}) do
+        for _,name in ipairs({"sampleTarget","sumTarget","outputTarget","rawTarget","rawSumTarget"}) do
+            local rt=shot[name]
             if ue.valid(rt) then lib:ReleaseRenderTarget2D(rt) end
+            shot[name]=nil
         end
-        shot.actor,shot.capture,shot.sampleTarget,shot.sumTarget,shot.outputTarget = nil,nil,nil,nil,nil
+        shot.actor,shot.capture,shot.rawCapture = nil,nil,nil
     end
 
     return motion

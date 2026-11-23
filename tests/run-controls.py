@@ -28,4 +28,7 @@ for path in scripts.glob('*.lua'):
 run('table.unpack=unpack; FName=function(value) return value end')
 run('scripts='+json.dumps(scripts.as_posix()+'/')+'; fixture='+json.dumps(fixture.as_posix()))
 check(lua.luaL_loadfile(state,str(root/'tests/controls.lua').encode()) or lua.lua_pcall(state,0,0,0))
-print('PASS: all 19 runtime scripts parse.')
+print(f'PASS: all {len(list(scripts.glob("*.lua")))} runtime scripts parse.')
+for file in fixture.glob('VHOLUMEPhotoCamera.capture*'):
+    file.unlink()
+check(lua.luaL_loadfile(state,str(root/'tests/capture.lua').encode()) or lua.lua_pcall(state,0,0,0))

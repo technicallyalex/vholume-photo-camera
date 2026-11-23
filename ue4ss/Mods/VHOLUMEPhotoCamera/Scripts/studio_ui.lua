@@ -1,7 +1,7 @@
 local directory = assert(debug.getinfo(1, "S").source:match("^@(.+[\\/])"))
 local buildControls = dofile(directory .. "controls.lua")
 
-return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePage, exposure)
+return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePage, exposure, outputPage, captureConfig)
     local ui = {}
     local w, h, dpi = rect.width, rect.height, rect.dpi
     local wide = w >= h
@@ -223,6 +223,53 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
         return attach()
     end
 
+    if outputPage then
+        local pw,ph=math.min(740*unit,w-30*unit),350*unit
+        local left,top=(w-pw)/2,(h-ph)/2
+        local innerX,innerW=left+18*unit,pw-36*unit
+        block(left,top,pw,ph,color(.025,.038,.032,.98))
+        block(left,top,pw,2*unit,gold)
+        glyph("photos",innerX,top+14*unit,21*unit)
+        label(innerX+30*unit,top+11*unit,innerW-30*unit,26*unit,18,"PHOTO STUDIO / OUTPUT",ink)
+        label(innerX,top+47*unit,innerW,16*unit,9,"FILE AND IMAGE SIZE",gold)
+        local values,rows={},{}
+        for i,row in ipairs({{"format","FILE FORMAT"},{"resolution","RESOLUTION / LONG EDGE"},{"method","CAPTURE METHOD"}}) do
+            local py=top+(72+(i-1)*44)*unit
+            local captionW=innerW*.40
+            label(innerX,py+5*unit,captionW,18*unit,9,row[2],quiet)
+            values[row[1]]=stepper(innerX+captionW,py,innerW-captionW,11,"captureStep",row[1])
+            rows[#rows+1]=row[1]
+        end
+        local sizeText=label(innerX,top+209*unit,innerW,20*unit,12,"",ink)
+        local info=label(innerX,top+238*unit,innerW,36*unit,8.5,"",quiet)
+        updateContext=function()
+            local selected=hovered or focused
+            info:SetText(FText(captureConfig.help(selected and selected.card or "resolution")))
+        end
+        local notice=label(innerX,top+277*unit,innerW,18*unit,9,"",gold)
+        button(innerX,top+301*unit,138*unit,24*unit,"BACK TO STUDIO","outputBack",nil,nil,nil,"back")
+        button(innerX+innerW-144*unit,top+301*unit,144*unit,24*unit,"OPEN VIEWFINDER","finder",nil,nil,nil,"finder")
+        local hint=label(innerX,top+330*unit,innerW,16*unit,8,"",quiet)
+        function ui.notice(message) notice:SetText(FText(message)) end
+        function ui.update(_,_,_,_,_,_,controller)
+            values.format:SetText(FText(captureConfig.formats[captureConfig.format]))
+            values.resolution:SetText(FText(captureConfig.resolutions[captureConfig.resolution]))
+            values.method:SetText(FText(captureConfig.methods[captureConfig.method]))
+            local width,height=captureConfig.dimensions(rect)
+            sizeText:SetText(FText(string.format("%d x %d pixels   /   %d:%d",width,height,rect.columns,rect.rows)))
+            hint:SetText(FText(controller and "D-PAD   Navigate / adjust       A   Select       B   Back       LT   Finder"
+                or "ARROWS   Navigate / adjust       TAB   Next control       ENTER   Select"))
+            updateContext()
+        end
+        function ui.moveOutputFocus(direction)
+            local index=1
+            for i,key in ipairs(rows) do if focused and focused.card==key then index=i end end
+            ui.focus("captureStep",-1,rows[(index-1+direction)%#rows+1])
+        end
+        function ui.tick() end
+        return attach()
+    end
+
     if exposurePage then
         local pw, ph = (wide and 960 or 580)*unit, (wide and 340 or 490)*unit
         local left, top = (w-pw)/2, (h-ph)/2
@@ -365,6 +412,7 @@ return function(ue, pc, rect, assets, binds, cards, keyPage, raised, exposurePag
             button(innerX,py+156*unit,innerW,21*unit,"OPEN FOLDER","select",i,nil,nil,"photos")
             button(innerX,py+181*unit,innerW,21*unit,"CHOOSE FOLDER","choosePhotos",i,nil,nil,"photos")
             button(innerX,py+205*unit,innerW,12*unit,"USE DEFAULT","resetPhotos",i,nil,7)
+            button(innerX,py+229*unit,innerW,22*unit,"OUTPUT SETTINGS","outputOpen",i)
         elseif card == "exposure" then
             tile.value = label(innerX,py+110*unit,innerW,20*unit,13,"",ink,true)
             tile.detail = label(innerX,py+134*unit,innerW,17*unit,8.5,"",quiet,true)

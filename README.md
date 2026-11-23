@@ -1,6 +1,6 @@
 # VHOLUME Photo Camera
 
-**Local controls preview v1.0.3-alpha.1:** 5 toggles camera mode, 6 opens Studio, and right-click opens the viewfinder from either. Studio selection uses Enter. The preview starts with all keybinds at their defaults and keeps the previous profile for rollback. The public downloads below remain v1.0.2.
+**Local capture preview v1.0.3-alpha.2:** full-frame PNG and linear HDR EXR output, selectable image resolution, and an optional temporary game-resolution mode with restoration. The 5 / 6 / right-click controls from alpha.1 remain. [Capture settings and editing guide](GUIDE.md#full-resolution-photos-and-hdr-output). The public downloads below remain unchanged.
 
 A photo mode for VHOLUME with a 35 mm viewfinder, eight lenses, film looks, manual focus, and exposure controls. Separate packages are available for Windows and Linux through Proton.
 
